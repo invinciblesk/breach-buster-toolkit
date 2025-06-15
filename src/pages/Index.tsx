@@ -15,6 +15,20 @@ import { Footer } from "@/components/Footer";
 const Index = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
 
+  const getSectionTitle = (section: string) => {
+    const titles: Record<string, string> = {
+      "dashboard": "Dashboard",
+      "network-scanner": "Network Scanner",
+      "wireless-scanner": "Wireless Scanner",
+      "vulnerability-assessment": "Vulnerability Assessment",
+      "payload-generator": "Payload Generator",
+      "reports": "Reports",
+      "target-manager": "Target Manager",
+      "security-integrations": "Security Integrations",
+    };
+    return titles[section] || "Dashboard";
+  };
+
   const renderActiveSection = () => {
     switch (activeSection) {
       case "dashboard":
@@ -39,14 +53,25 @@ const Index = () => {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen bg-gray-900 text-green-400 flex w-full">
-        <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-        <div className="flex-1 flex flex-col ml-0 md:ml-16 peer-data-[state=expanded]:md:ml-64 transition-all duration-300">
-          <main className="flex-1 p-6 overflow-auto">
+        <div className="fixed left-0 top-0 h-screen z-40">
+          <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+        </div>
+        
+        <div className="flex-1 flex flex-col ml-64">
+          {/* Fixed Header */}
+          <div className="fixed top-0 left-64 right-0 bg-gray-900 border-b border-gray-700 px-6 py-4 z-30">
+            <h1 className="text-2xl font-bold text-white">{getSectionTitle(activeSection)}</h1>
+          </div>
+          
+          {/* Main Content */}
+          <main className="flex-1 pt-16 p-6 overflow-auto">
             {renderActiveSection()}
           </main>
-          <div className="sticky bottom-0 z-30">
+          
+          {/* Fixed Footer */}
+          <div className="fixed bottom-0 left-64 right-0 z-30">
             <Footer />
           </div>
         </div>
