@@ -107,17 +107,88 @@ export const Reports = () => {
   const resolutionRate = totalReports > 0 ? Math.round((completedReports / totalReports) * 100) : 0;
 
   const handleDownload = (reportName: string) => {
+    // Create a mock PDF blob for demonstration
+    const pdfContent = `Security Report: ${reportName}\n\nGenerated on: ${new Date().toLocaleString()}\n\nThis is a sample security assessment report.`;
+    const blob = new Blob([pdfContent], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a temporary download link
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${reportName.replace(/\s+/g, '_')}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the URL object
+    URL.revokeObjectURL(url);
+    
     toast({
-      title: "Downloading Report",
+      title: "Download Started",
       description: `${reportName} is being downloaded...`,
     });
     console.log(`Downloading report: ${reportName}`);
   };
 
   const handlePreview = (reportName: string) => {
+    // Create a mock report preview content
+    const reportContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${reportName} - Preview</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a1a; color: white; }
+            h1 { color: #22c55e; }
+            .section { margin: 20px 0; padding: 15px; background: #2a2a2a; border-radius: 8px; }
+            .critical { color: #ef4444; }
+            .high { color: #f97316; }
+            .medium { color: #eab308; }
+            .low { color: #22c55e; }
+          </style>
+        </head>
+        <body>
+          <h1>${reportName}</h1>
+          <div class="section">
+            <h2>Executive Summary</h2>
+            <p>This security assessment report contains findings from network and application security testing.</p>
+          </div>
+          <div class="section">
+            <h2>Vulnerability Summary</h2>
+            <ul>
+              <li class="critical">Critical Issues: 5</li>
+              <li class="high">High Issues: 8</li>
+              <li class="medium">Medium Issues: 12</li>
+              <li class="low">Low Issues: 15</li>
+            </ul>
+          </div>
+          <div class="section">
+            <h2>Recommendations</h2>
+            <p>1. Address critical vulnerabilities immediately</p>
+            <p>2. Implement security patches for high-priority issues</p>
+            <p>3. Review and update security policies</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    // Open preview in a new window
+    const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    if (previewWindow) {
+      previewWindow.document.write(reportContent);
+      previewWindow.document.close();
+      previewWindow.focus();
+    } else {
+      // Fallback if popup is blocked
+      const blob = new Blob([reportContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      URL.revokeObjectURL(url);
+    }
+    
     toast({
       title: "Opening Preview",
-      description: `${reportName} is being opened for preview...`,
+      description: `${reportName} preview opened in new window.`,
     });
     console.log(`Previewing report: ${reportName}`);
   };
