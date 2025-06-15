@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -14,6 +14,25 @@ import { Footer } from "@/components/Footer";
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [showFooter, setShowFooter] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = document.documentElement.scrollTop;
+      const clientHeight = document.documentElement.clientHeight;
+      
+      // Show footer when user scrolls to within 100px of the bottom
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
+      setShowFooter(isNearBottom);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    // Check initial state
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const getSectionTitle = (section: string) => {
     const titles: Record<string, string> = {
@@ -61,19 +80,21 @@ const Index = () => {
         
         <div className="flex-1 flex flex-col ml-64">
           {/* Fixed Header */}
-          <div className="fixed top-0 left-64 right-0 bg-gray-900 border-b border-gray-700 px-6 py-4 z-30">
+          <div className="sticky top-0 bg-gray-900 border-b border-gray-700 px-6 py-4 z-30">
             <h1 className="text-2xl font-bold text-white">{getSectionTitle(activeSection)}</h1>
           </div>
           
           {/* Main Content */}
-          <main className="flex-1 pt-16 p-6 overflow-auto">
+          <main className="flex-1 p-6">
             {renderActiveSection()}
           </main>
           
-          {/* Fixed Footer */}
-          <div className="fixed bottom-0 left-64 right-0 z-30">
-            <Footer />
-          </div>
+          {/* Footer - only visible when scrolled to bottom */}
+          {showFooter && (
+            <div className="transition-opacity duration-300">
+              <Footer />
+            </div>
+          )}
         </div>
       </div>
     </SidebarProvider>
