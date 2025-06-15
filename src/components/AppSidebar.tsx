@@ -1,5 +1,5 @@
 
-import { Shield, Search, Bug, Code, Database, Lock, Wifi, Settings } from "lucide-react";
+import { Shield, Search, Bug, Code, Database, Lock, Wifi, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +11,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
@@ -32,21 +34,39 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
     { id: "reports", label: "Reports", icon: Lock },
   ];
 
+  // Access sidebar context to show dynamic trigger icon/text
+  const { state } = useSidebar();
+
   return (
     <Sidebar className="bg-gray-800 border-r border-gray-700">
-      <SidebarHeader className="p-6 border-b border-gray-700">
+      <SidebarHeader className="p-4 pb-2 border-b border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Shield size={24} className="text-green-400" />
-          <div>
-            <h1 className="text-xl font-bold text-green-400">CyberPen Pro</h1>
-            <p className="text-gray-400 text-sm">Pentesting Automation Suite</p>
-          </div>
+          {state === "expanded" && (
+            <div>
+              <h1 className="text-xl font-bold text-green-400 whitespace-nowrap">CyberPen Pro</h1>
+              <p className="text-gray-400 text-xs leading-tight mt-0.5">Pentesting Automation Suite</p>
+            </div>
+          )}
         </div>
+        {/* Collapse/Expand trigger */}
+        <SidebarTrigger
+          className={cn(
+            "ml-1 p-1 w-8 h-8 rounded-md border border-green-900 transition-colors bg-gray-900 hover:bg-green-900/20 flex items-center justify-center",
+            "text-green-400",
+            state === "expanded" ? "hover:text-green-300" : "hover:text-green-500"
+          )}
+          aria-label={state === "expanded" ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {state === "expanded" ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </SidebarTrigger>
       </SidebarHeader>
       
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-gray-400">Security Tools</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-gray-400">
+            {state === "expanded" && "Security Tools"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
@@ -64,7 +84,7 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
                       )}
                     >
                       <Icon size={18} />
-                      <span className="text-sm font-medium">{item.label}</span>
+                      {state === "expanded" && <span className="text-sm font-medium">{item.label}</span>}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
