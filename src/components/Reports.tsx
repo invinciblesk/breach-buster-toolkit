@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Download, FileText, Lock, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const initialReports = [
   {
@@ -54,9 +60,12 @@ const reportTypeOptions = [
     { value: "compliance", label: "Compliance Report", typeName: "Compliance" }
 ];
 
+type Report = typeof initialReports[number];
+
 export const Reports = () => {
   const [reportType, setReportType] = useState("");
-  const [reports, setReports] = useState(initialReports);
+  const [reports, setReports] = useState<Report[]>(initialReports);
+  const [reportToPreview, setReportToPreview] = useState<Report | null>(null);
   const { toast } = useToast();
 
   const handleGenerateReport = () => {
@@ -107,12 +116,8 @@ export const Reports = () => {
     console.log("Downloading report:", reportName);
   };
 
-  const handlePreviewReport = (reportName: string) => {
-    toast({
-      title: "Previewing Report",
-      description: `Showing preview for ${reportName}...`,
-    });
-    console.log("Previewing report:", reportName);
+  const handlePreviewReport = (report: Report) => {
+    setReportToPreview(report);
   };
 
   const handleReviewReport = (reportId: number) => {
@@ -214,7 +219,7 @@ export const Reports = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handlePreviewReport(report.name)}
+                          onClick={() => handlePreviewReport(report)}
                           className="text-white border-gray-500 hover:bg-gray-600 hover:text-white"
                         >
                           <Eye size={14} className="mr-1" />
@@ -291,6 +296,44 @@ export const Reports = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {reportToPreview && (
+        <Dialog open={!!reportToPreview} onOpenChange={(isOpen) => !isOpen && setReportToPreview(null)}>
+          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText /> {reportToPreview.name}
+              </DialogTitle>
+              <DialogDescription className="text-gray-400 pt-2">
+                Report Type: {reportToPreview.type}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Calendar size={14} className="text-gray-400" />
+                <span className="text-gray-300">Date: {reportToPreview.date}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className={getStatusColor(reportToPreview.status) + " text-white"}>{reportToPreview.status}</Badge>
+              </div>
+              <div className="text-gray-300 col-span-2">
+                <span className="text-red-400 font-medium">{reportToPreview.vulnerabilities}</span> vulnerabilities found across <span className="text-blue-400 font-medium">{reportToPreview.targets}</span> targets.
+              </div>
+            </div>
+            <div className="bg-gray-900/50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-white">Report Content Preview</h4>
+              <p className="text-gray-400 text-xs">
+                This is a placeholder for the report preview content. In a real application, this would show a summary or the full content of the report. For now, it just shows the key details.
+              </p>
+              <div className="mt-4 space-y-2 text-xs text-gray-300">
+                <p><strong>Vulnerability Analysis:</strong> High-risk vulnerabilities detected on web servers, requiring immediate patching.</p>
+                <p><strong>Target Scope:</strong> Includes all public-facing web applications and associated APIs.</p>
+                <p><strong>Recommendations:</strong> Apply security patches, update firewall rules, and conduct a follow-up scan.</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
