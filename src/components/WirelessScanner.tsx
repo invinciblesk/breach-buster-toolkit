@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,121 +7,178 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wifi, Bluetooth, Search, Play, Square, Shield, AlertTriangle, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+type WifiNetwork = {
+  ssid: string;
+  bssid: string;
+  security: string;
+  signal: number;
+  channel: number;
+  frequency: string;
+  vendor: string;
+  encryption: string;
+};
+
+type BluetoothDevice = {
+  name: string;
+  address: string;
+  deviceClass: string;
+  rssi: number;
+  services: string[];
+  manufacturer: string;
+  version: string;
+};
+
+const mockWifiData: WifiNetwork[] = [
+  { 
+    ssid: "HomeNetwork_5G", 
+    bssid: "AA:BB:CC:DD:EE:FF", 
+    security: "WPA2-PSK", 
+    signal: -45, 
+    channel: 36, 
+    frequency: "5.18 GHz",
+    vendor: "Netgear",
+    encryption: "AES"
+  },
+  { 
+    ssid: "Office_WiFi", 
+    bssid: "11:22:33:44:55:66", 
+    security: "WPA3-PSK", 
+    signal: -60, 
+    channel: 6, 
+    frequency: "2.437 GHz",
+    vendor: "Cisco",
+    encryption: "AES"
+  },
+  { 
+    ssid: "Guest_Network", 
+    bssid: "77:88:99:AA:BB:CC", 
+    security: "Open", 
+    signal: -70, 
+    channel: 11, 
+    frequency: "2.462 GHz",
+    vendor: "TP-Link",
+    encryption: "None"
+  },
+  { 
+    ssid: "Legacy_Router", 
+    bssid: "DD:EE:FF:00:11:22", 
+    security: "WEP", 
+    signal: -80, 
+    channel: 1, 
+    frequency: "2.412 GHz",
+    vendor: "Linksys",
+    encryption: "WEP"
+  },
+];
+
+const mockBluetoothData: BluetoothDevice[] = [
+  {
+    name: "iPhone 13",
+    address: "AA:BB:CC:DD:EE:01",
+    deviceClass: "Phone",
+    rssi: -45,
+    services: ["HID", "A2DP", "AVRCP"],
+    manufacturer: "Apple",
+    version: "5.0"
+  },
+  {
+    name: "AirPods Pro",
+    address: "BB:CC:DD:EE:FF:02",
+    deviceClass: "Audio",
+    rssi: -55,
+    services: ["A2DP", "HFP"],
+    manufacturer: "Apple",
+    version: "5.0"
+  },
+  {
+    name: "Dell Keyboard",
+    address: "CC:DD:EE:FF:00:03",
+    deviceClass: "Peripheral",
+    rssi: -65,
+    services: ["HID"],
+    manufacturer: "Dell",
+    version: "4.2"
+  },
+  {
+    name: "Unknown Device",
+    address: "DD:EE:FF:00:11:04",
+    deviceClass: "Unknown",
+    rssi: -75,
+    services: ["Unknown"],
+    manufacturer: "Unknown",
+    version: "Unknown"
+  },
+];
 
 export const WirelessScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [activeTab, setActiveTab] = useState("wifi");
   const { toast } = useToast();
+  const [foundWifiNetworks, setFoundWifiNetworks] = useState<WifiNetwork[]>([]);
+  const [foundBluetoothDevices, setFoundBluetoothDevices] = useState<BluetoothDevice[]>([]);
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Mock WiFi networks data
-  const [wifiNetworks] = useState([
-    { 
-      ssid: "HomeNetwork_5G", 
-      bssid: "AA:BB:CC:DD:EE:FF", 
-      security: "WPA2-PSK", 
-      signal: -45, 
-      channel: 36, 
-      frequency: "5.18 GHz",
-      vendor: "Netgear",
-      encryption: "AES"
-    },
-    { 
-      ssid: "Office_WiFi", 
-      bssid: "11:22:33:44:55:66", 
-      security: "WPA3-PSK", 
-      signal: -60, 
-      channel: 6, 
-      frequency: "2.437 GHz",
-      vendor: "Cisco",
-      encryption: "AES"
-    },
-    { 
-      ssid: "Guest_Network", 
-      bssid: "77:88:99:AA:BB:CC", 
-      security: "Open", 
-      signal: -70, 
-      channel: 11, 
-      frequency: "2.462 GHz",
-      vendor: "TP-Link",
-      encryption: "None"
-    },
-    { 
-      ssid: "Legacy_Router", 
-      bssid: "DD:EE:FF:00:11:22", 
-      security: "WEP", 
-      signal: -80, 
-      channel: 1, 
-      frequency: "2.412 GHz",
-      vendor: "Linksys",
-      encryption: "WEP"
-    },
-  ]);
-
-  // Mock Bluetooth devices data
-  const [bluetoothDevices] = useState([
-    {
-      name: "iPhone 13",
-      address: "AA:BB:CC:DD:EE:01",
-      deviceClass: "Phone",
-      rssi: -45,
-      services: ["HID", "A2DP", "AVRCP"],
-      manufacturer: "Apple",
-      version: "5.0"
-    },
-    {
-      name: "AirPods Pro",
-      address: "BB:CC:DD:EE:FF:02",
-      deviceClass: "Audio",
-      rssi: -55,
-      services: ["A2DP", "HFP"],
-      manufacturer: "Apple",
-      version: "5.0"
-    },
-    {
-      name: "Dell Keyboard",
-      address: "CC:DD:EE:FF:00:03",
-      deviceClass: "Peripheral",
-      rssi: -65,
-      services: ["HID"],
-      manufacturer: "Dell",
-      version: "4.2"
-    },
-    {
-      name: "Unknown Device",
-      address: "DD:EE:FF:00:11:04",
-      deviceClass: "Unknown",
-      rssi: -75,
-      services: ["Unknown"],
-      manufacturer: "Unknown",
-      version: "Unknown"
-    },
-  ]);
+  useEffect(() => {
+    return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleStartScan = () => {
+    if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
     setIsScanning(true);
     setScanProgress(0);
     
-    // Simulate scan progress
-    const interval = setInterval(() => {
-      setScanProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsScanning(false);
-          toast({
-            title: "Wireless Scan Complete",
-            description: `${activeTab === 'wifi' ? 'WiFi' : 'Bluetooth'} scan completed successfully`,
-          });
-          return 100;
+    if (activeTab === 'wifi') {
+      setFoundWifiNetworks([]);
+    } else {
+      setFoundBluetoothDevices([]);
+    }
+
+    const dataToScan = activeTab === 'wifi' ? mockWifiData : mockBluetoothData;
+    const totalItems = dataToScan.length;
+    let itemsAdded = 0;
+
+    scanIntervalRef.current = setInterval(() => {
+      if (itemsAdded < totalItems) {
+        const newItem = dataToScan[itemsAdded];
+        if (activeTab === 'wifi') {
+          setFoundWifiNetworks(prev => [...prev, newItem as WifiNetwork]);
+        } else {
+          setFoundBluetoothDevices(prev => [...prev, newItem as BluetoothDevice]);
         }
-        return prev + 8;
-      });
-    }, 400);
+        itemsAdded++;
+        setScanProgress(Math.round((itemsAdded / totalItems) * 100));
+      } else {
+        if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+        setIsScanning(false);
+        setScanProgress(100);
+        toast({
+          title: "Wireless Scan Complete",
+          description: `${activeTab === 'wifi' ? 'WiFi' : 'Bluetooth'} scan completed successfully`,
+        });
+      }
+    }, 800);
 
     console.log(`Starting ${activeTab} scan`);
   };
 
   const handleStopScan = () => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+    }
     setIsScanning(false);
     setScanProgress(0);
     toast({
@@ -221,56 +278,48 @@ export const WirelessScanner = () => {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Wifi size={20} />
-                WiFi Networks ({wifiNetworks.length} found)
+                WiFi Networks ({foundWifiNetworks.length} found)
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {wifiNetworks.map((network, index) => {
-                  const security = getSecurityLevel(network.security);
-                  const signal = getSignalStrength(network.signal);
-                  
-                  return (
-                    <div key={index} className="p-4 bg-gray-700/50 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Wifi size={18} className="text-blue-400" />
-                          <div>
-                            <span className="text-white font-medium">{network.ssid}</span>
-                            <p className="text-xs text-gray-400">{network.bssid}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-700 hover:bg-gray-700/50">
+                    <TableHead className="text-gray-300">SSID</TableHead>
+                    <TableHead className="text-gray-300">BSSID</TableHead>
+                    <TableHead className="text-gray-300">Signal</TableHead>
+                    <TableHead className="text-gray-300">Channel</TableHead>
+                    <TableHead className="text-gray-300">Security</TableHead>
+                    <TableHead className="text-gray-300">Vendor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {foundWifiNetworks.map((network, index) => {
+                    const security = getSecurityLevel(network.security);
+                    const signal = getSignalStrength(network.signal);
+                    return (
+                      <TableRow key={index} className="border-gray-700 hover:bg-gray-700/50">
+                        <TableCell className="font-medium text-white">{network.ssid}</TableCell>
+                        <TableCell className="text-gray-400">{network.bssid}</TableCell>
+                        <TableCell className={signal.color}>{network.signal} dBm</TableCell>
+                        <TableCell className="text-white">{network.channel}</TableCell>
+                        <TableCell>
                           <Badge className={security.color}>
                             {security.icon}
                             <span className="ml-1">{network.security}</span>
                           </Badge>
-                          <span className={`text-sm ${signal.color}`}>{signal.strength}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-400">Signal:</span>
-                          <span className="text-white ml-2">{network.signal} dBm</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Channel:</span>
-                          <span className="text-white ml-2">{network.channel}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Frequency:</span>
-                          <span className="text-white ml-2">{network.frequency}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Vendor:</span>
-                          <span className="text-white ml-2">{network.vendor}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                        </TableCell>
+                        <TableCell className="text-white">{network.vendor}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {foundWifiNetworks.length === 0 && !isScanning && (
+                <div className="text-center py-10 text-gray-500">
+                  No WiFi networks found. Start a scan to discover networks.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -280,59 +329,50 @@ export const WirelessScanner = () => {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Bluetooth size={20} />
-                Bluetooth Devices ({bluetoothDevices.length} found)
+                Bluetooth Devices ({foundBluetoothDevices.length} found)
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {bluetoothDevices.map((device, index) => {
-                  const signal = getSignalStrength(device.rssi);
-                  
-                  return (
-                    <div key={index} className="p-4 bg-gray-700/50 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Bluetooth size={18} className="text-blue-400" />
-                          <div>
-                            <span className="text-white font-medium">{device.name}</span>
-                            <p className="text-xs text-gray-400">{device.address}</p>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-700 hover:bg-gray-700/50">
+                    <TableHead className="text-gray-300">Name</TableHead>
+                    <TableHead className="text-gray-300">Address</TableHead>
+                    <TableHead className="text-gray-300">RSSI</TableHead>
+                    <TableHead className="text-gray-300">Class</TableHead>
+                    <TableHead className="text-gray-300">Manufacturer</TableHead>
+                    <TableHead className="text-gray-300">Services</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {foundBluetoothDevices.map((device, index) => {
+                    const signal = getSignalStrength(device.rssi);
+                    return (
+                      <TableRow key={index} className="border-gray-700 hover:bg-gray-700/50">
+                        <TableCell className="font-medium text-white">{device.name}</TableCell>
+                        <TableCell className="text-gray-400">{device.address}</TableCell>
+                        <TableCell className={signal.color}>{device.rssi} dBm</TableCell>
+                        <TableCell><Badge variant="outline">{device.deviceClass}</Badge></TableCell>
+                        <TableCell className="text-white">{device.manufacturer}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {device.services.map((service, serviceIndex) => (
+                              <Badge key={serviceIndex} variant="outline" className="text-xs">
+                                {service}
+                              </Badge>
+                            ))}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{device.deviceClass}</Badge>
-                          <span className={`text-sm ${signal.color}`}>{signal.strength}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-400">RSSI:</span>
-                          <span className="text-white ml-2">{device.rssi} dBm</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Version:</span>
-                          <span className="text-white ml-2">BT {device.version}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Manufacturer:</span>
-                          <span className="text-white ml-2">{device.manufacturer}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-2">
-                        <span className="text-gray-400 text-sm">Services: </span>
-                        <div className="flex gap-1 mt-1">
-                          {device.services.map((service, serviceIndex) => (
-                            <Badge key={serviceIndex} variant="outline" className="text-xs">
-                              {service}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+              {foundBluetoothDevices.length === 0 && !isScanning && (
+                <div className="text-center py-10 text-gray-500">
+                  No Bluetooth devices found. Start a scan to discover devices.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
