@@ -1,5 +1,4 @@
-
-# Futuristic 3D Game
+# Welcome to your Lovable project
 
 ## Project info
 
