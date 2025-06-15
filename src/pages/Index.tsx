@@ -40,14 +40,16 @@ const Index = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-900 text-green-400 flex w-full flex-col">
-        <div className="flex flex-1 w-full">
-          <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-          <main className="flex-1 p-6">
+      <div className="min-h-screen bg-gray-900 text-green-400 flex w-full">
+        <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+        <div className="flex-1 flex flex-col ml-0 md:ml-16 peer-data-[state=expanded]:md:ml-64 transition-all duration-300">
+          <main className="flex-1 p-6 overflow-auto">
             {renderActiveSection()}
           </main>
+          <div className="sticky bottom-0 z-30">
+            <Footer />
+          </div>
         </div>
-        <Footer />
       </div>
     </SidebarProvider>
   );

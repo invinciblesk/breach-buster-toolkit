@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +19,21 @@ export const Dashboard = ({ setActiveSection }: DashboardProps) => {
     retestVulns: 0,
     closedVulns: 0,
   });
+
+  // Get current date and calculate project timeline
+  const currentDate = new Date();
+  const projectStartDate = new Date();
+  projectStartDate.setDate(currentDate.getDate() - 7); // Started 7 days ago
+  const projectEndDate = new Date();
+  projectEndDate.setDate(currentDate.getDate() + 7); // Ends in 7 days
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
 
   // Animate counters on load
   useEffect(() => {
@@ -133,16 +147,16 @@ export const Dashboard = ({ setActiveSection }: DashboardProps) => {
             </div>
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                CyberPen Pro Portal
+                CyberPro Pro Portal
               </h1>
               <p className="text-gray-400 flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                Projects / CyberPen Pro Portal / Overview
+                Projects / CyberPro Pro Portal / Overview
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4 text-sm text-gray-500">
-            <span>December 15, 2024 - December 22, 2024</span>
+            <span>{formatDate(projectStartDate)} - {formatDate(projectEndDate)}</span>
             <Badge variant="outline" className="border-green-500/20 text-green-400 bg-green-500/10">
               <Activity className="w-3 h-3 mr-1" />
               Testing in Progress
@@ -252,8 +266,8 @@ export const Dashboard = ({ setActiveSection }: DashboardProps) => {
               </div>
               <Progress value={testingProgress} className="h-3 bg-gray-700" />
               <div className="flex justify-between text-sm text-gray-400 mt-2">
-                <span>Started Dec 15</span>
-                <span>Est. completion: Dec 22</span>
+                <span>Started {formatDate(projectStartDate)}</span>
+                <span>Est. completion: {formatDate(projectEndDate)}</span>
               </div>
             </CardContent>
           </Card>
@@ -512,7 +526,7 @@ export const Dashboard = ({ setActiveSection }: DashboardProps) => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <span className="text-gray-400 text-sm">Project Name</span>
-                    <p className="text-white font-medium">CyberPen Pro Portal</p>
+                    <p className="text-white font-medium">CyberPro Pro Portal</p>
                   </div>
                   <div className="space-y-2">
                     <span className="text-gray-400 text-sm">Project Code</span>

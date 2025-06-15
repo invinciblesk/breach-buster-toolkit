@@ -21,7 +21,7 @@ const SIDEBAR_COOKIE_NAME = "sidebar:state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH_ICON = "4rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContext = {
@@ -166,7 +166,7 @@ const Sidebar = React.forwardRef<
     {
       side = "left",
       variant = "sidebar",
-      collapsible = "offcanvas",
+      collapsible = "icon",
       className,
       children,
       ...props
@@ -210,54 +210,27 @@ const Sidebar = React.forwardRef<
       )
     }
 
-    // Update: add collapsed sidebar shrink UI (icon-only width).
     return (
       <div
         ref={ref}
         className={cn(
-          "group peer hidden md:block text-sidebar-foreground",
-          state === "collapsed" ? "w-[--sidebar-width-icon] min-w-[--sidebar-width-icon] transition-all shadow-lg" : "",
-          "transition-all duration-200",
+          "group peer fixed left-0 top-0 z-40 hidden h-screen transition-all duration-300 md:block text-sidebar-foreground",
+          state === "collapsed" ? "w-[--sidebar-width-icon]" : "w-[--sidebar-width]",
           className
         )}
         data-state={state}
-        data-collapsible={state === "collapsed" ? "icon" : collapsible}
+        data-collapsible={collapsible}
         data-variant={variant}
         data-side={side}
       >
         <div
           className={cn(
-            "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
-            "group-data-[collapsible=offcanvas]:w-0",
-            "group-data-[side=right]:rotate-180",
-            variant === "floating" || variant === "inset"
-              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
-          )}
-        />
-        <div
-          className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
-            state === "collapsed" && "w-[--sidebar-width-icon] min-w-[--sidebar-width-icon]",
-            side === "left"
-              ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-              : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-            (variant === "floating" || variant === "inset")
-              ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
-            className
+            "flex h-full w-full flex-col bg-sidebar transition-all duration-300",
+            state === "collapsed" ? "items-center" : ""
           )}
           {...props}
         >
-          <div
-            data-sidebar="sidebar"
-            className={cn(
-              "flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow",
-              state === "collapsed" ? "items-center" : ""
-            )}
-          >
-            {children}
-          </div>
+          {children}
         </div>
       </div>
     )

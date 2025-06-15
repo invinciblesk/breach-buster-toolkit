@@ -34,7 +34,6 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
     { id: "reports", label: "Reports", icon: Lock },
   ];
 
-  // Access sidebar context to show dynamic trigger icon/text
   const { state } = useSidebar();
 
   return (
@@ -44,12 +43,11 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
           <Shield size={24} className="text-green-400" />
           {state === "expanded" && (
             <div>
-              <h1 className="text-xl font-bold text-green-400 whitespace-nowrap">CyberPen Pro</h1>
+              <h1 className="text-xl font-bold text-green-400 whitespace-nowrap">CyberPro Pro</h1>
               <p className="text-gray-400 text-xs leading-tight mt-0.5">Pentesting Automation Suite</p>
             </div>
           )}
         </div>
-        {/* Collapse/Expand trigger */}
         <SidebarTrigger
           className={cn(
             "ml-1 p-1 w-8 h-8 rounded-md border border-green-900 transition-colors bg-gray-900 hover:bg-green-900/20 flex items-center justify-center",
@@ -76,6 +74,7 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
                     <SidebarMenuButton
                       onClick={() => setActiveSection(item.id)}
                       isActive={activeSection === item.id}
+                      tooltip={state === "collapsed" ? item.label : undefined}
                       className={cn(
                         "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200",
                         activeSection === item.id
@@ -95,15 +94,17 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
       </SidebarContent>
       
       <SidebarFooter className="p-4 border-t border-gray-700">
-        <div className="mb-3">
-          <UserMenu />
-        </div>
+        {state === "expanded" && (
+          <div className="mb-3">
+            <UserMenu />
+          </div>
+        )}
         <div className="bg-gray-700 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-xs text-gray-300">System Status</span>
+            {state === "expanded" && <span className="text-xs text-gray-300">System Status</span>}
           </div>
-          <p className="text-xs text-green-400">All systems operational</p>
+          {state === "expanded" && <p className="text-xs text-green-400">All systems operational</p>}
         </div>
       </SidebarFooter>
     </Sidebar>
