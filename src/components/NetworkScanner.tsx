@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Play, Pause, Square, Shield, Bug, FileText } from "lucide-react";
+import { Search, Play, Square, Shield, Bug, FileText, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const NetworkScanner = () => {
   const [target, setTarget] = useState("192.168.1.0/24");
@@ -18,15 +19,27 @@ export const NetworkScanner = () => {
   const [scanResults, setScanResults] = useState([]);
   const [vulnerabilities, setVulnerabilities] = useState([]);
   const [piiFindings, setPiiFindings] = useState([]);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const validateTarget = (target: string): boolean => {
+    // Basic validation for IP addresses and domains
+    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\/(?:[0-9]|[1-2][0-9]|3[0-2]))?$/;
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+    
+    return ipRegex.test(target) || domainRegex.test(target) || target === 'localhost';
+  };
+
   const handleStartScan = async () => {
-    if (!target) {
-      toast({
-        title: "Error",
-        description: "Please enter a target IP or range",
-        variant: "destructive",
-      });
+    setError(null);
+    
+    if (!target.trim()) {
+      setError("Please enter a target IP or domain");
+      return;
+    }
+
+    if (!validateTarget(target.trim())) {
+      setError("Please enter a valid IP address, CIDR notation, or domain name");
       return;
     }
 
@@ -36,11 +49,7 @@ export const NetworkScanner = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to perform scans",
-          variant: "destructive",
-        });
+        setError("Authentication required. Please sign in to perform scans.");
         setIsScanning(false);
         return;
       }
@@ -56,26 +65,11 @@ export const NetworkScanner = () => {
         });
       }, 500);
 
-      let scanFunction = '';
-      switch (scanType) {
-        case 'network_scan':
-          scanFunction = 'nmap-scanner';
-          break;
-        case 'vulnerability_scan':
-          scanFunction = 'vulnerability-scanner';
-          break;
-        case 'pii_scan':
-          scanFunction = 'pii-scanner';
-          break;
-        default:
-          scanFunction = 'nmap-scanner';
-      }
-
       console.log(`Starting ${scanType} on ${target}`);
 
-      const { data, error } = await supabase.functions.invoke(scanFunction, {
+      const { data, error } = await supabase.functions.invoke('nmap-scanner', {
         body: { 
-          target,
+          target: target.trim(),
           scanType,
           parameters: {
             timeout: 300,
@@ -89,6 +83,7 @@ export const NetworkScanner = () => {
 
       if (error) {
         console.error('Scan error:', error);
+        setError(`Scan failed: ${error.message || 'Unknown error occurred'}`);
         toast({
           title: "Scan Failed",
           description: error.message || "Unknown error occurred",
@@ -96,6 +91,7 @@ export const NetworkScanner = () => {
         });
       } else {
         console.log('Scan completed:', data);
+        setError(null);
         toast({
           title: "Scan Complete",
           description: `${scanType.replace('_', ' ')} of ${target} completed successfully`,
@@ -104,54 +100,80 @@ export const NetworkScanner = () => {
         // Refresh data
         await fetchScanData();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Scan error:', error);
+      setError(`Network error: ${error.message || 'Failed to connect to scan service'}`);
       toast({
         title: "Scan Failed",
-        description: "An error occurred while starting the scan",
+        description: "Network error occurred while starting the scan",
         variant: "destructive",
       });
     } finally {
       setIsScanning(false);
+      setTimeout(() => setScanProgress(0), 2000);
     }
   };
 
   const fetchScanData = async () => {
     try {
+      setError(null);
+      
       // Fetch recent scans
-      const { data: scans } = await supabase
+      const { data: scans, error: scansError } = await supabase
         .from('scans')
-        .select('*')
+        .select(`
+          *,
+          scan_campaigns!inner(user_id)
+        `)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (scans) {
+      if (scansError) {
+        console.error('Error fetching scans:', scansError);
+      } else if (scans) {
         setScanResults(scans);
       }
 
       // Fetch recent vulnerabilities
-      const { data: vulns } = await supabase
+      const { data: vulns, error: vulnsError } = await supabase
         .from('vulnerabilities')
-        .select('*')
+        .select(`
+          *,
+          scans!inner(
+            campaign_id,
+            scan_campaigns!inner(user_id)
+          )
+        `)
         .order('created_at', { ascending: false })
         .limit(5);
 
-      if (vulns) {
+      if (vulnsError) {
+        console.error('Error fetching vulnerabilities:', vulnsError);
+      } else if (vulns) {
         setVulnerabilities(vulns);
       }
 
       // Fetch recent PII findings
-      const { data: pii } = await supabase
+      const { data: pii, error: piiError } = await supabase
         .from('pii_findings')
-        .select('*')
+        .select(`
+          *,
+          scans!inner(
+            campaign_id,
+            scan_campaigns!inner(user_id)
+          )
+        `)
         .order('created_at', { ascending: false })
         .limit(5);
 
-      if (pii) {
+      if (piiError) {
+        console.error('Error fetching PII findings:', piiError);
+      } else if (pii) {
         setPiiFindings(pii);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching scan data:', error);
+      setError('Failed to load scan history');
     }
   };
 
@@ -162,6 +184,7 @@ export const NetworkScanner = () => {
   const handleStopScan = () => {
     setIsScanning(false);
     setScanProgress(0);
+    setError(null);
     toast({
       title: "Scan Stopped",
       description: "Scan has been terminated",
@@ -178,12 +201,27 @@ export const NetworkScanner = () => {
     }
   };
 
+  const formatScanType = (type: string) => {
+    return type.replace('_', ' ').split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white">Advanced Security Scanner</h1>
         <p className="text-gray-400 mt-1">Professional security assessment with Nmap, OpenVAS, and PII detection</p>
       </div>
+
+      {error && (
+        <Alert className="bg-red-900/50 border-red-600">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-red-200">
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
@@ -203,6 +241,7 @@ export const NetworkScanner = () => {
                 className="bg-gray-700 border-gray-600 text-white"
                 disabled={isScanning}
               />
+              <p className="text-xs text-gray-500 mt-1">Enter IP address, CIDR notation, or domain name</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Scan Type</label>
@@ -220,11 +259,11 @@ export const NetworkScanner = () => {
             <div className="flex items-end gap-2">
               <Button
                 onClick={handleStartScan}
-                disabled={isScanning}
-                className="bg-green-600 hover:bg-green-700"
+                disabled={isScanning || !target.trim()}
+                className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
               >
                 <Play size={16} className="mr-2" />
-                Start Scan
+                {isScanning ? 'Scanning...' : 'Start Scan'}
               </Button>
               <Button
                 onClick={handleStopScan}
@@ -244,6 +283,7 @@ export const NetworkScanner = () => {
                 <span className="text-green-400">{scanProgress}%</span>
               </div>
               <Progress value={scanProgress} className="h-2 bg-gray-700" />
+              <p className="text-xs text-gray-400 mt-2">Scanning {target} with {formatScanType(scanType)}...</p>
             </div>
           )}
         </CardContent>
@@ -254,31 +294,44 @@ export const NetworkScanner = () => {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <Shield size={20} />
-              Recent Scans
+              Recent Scans ({scanResults.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {scanResults.map((scan: any, index) => (
-                <div key={index} className="p-4 bg-gray-700/50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${
-                        scan.status === 'completed' ? 'bg-green-500' : 
-                        scan.status === 'running' ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}></div>
-                      <span className="text-white font-medium">{scan.target}</span>
-                      <span className="text-gray-400">({scan.scan_type})</span>
-                    </div>
-                    <Badge variant={scan.status === 'completed' ? 'default' : 'destructive'}>
-                      {scan.status}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {new Date(scan.created_at).toLocaleString()}
-                  </div>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {scanResults.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <Shield className="mx-auto h-12 w-12 text-gray-600 mb-4" />
+                  <p>No scans performed yet</p>
+                  <p className="text-sm">Start your first security scan above</p>
                 </div>
-              ))}
+              ) : (
+                scanResults.map((scan: any, index) => (
+                  <div key={scan.id || index} className="p-4 bg-gray-700/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          scan.status === 'completed' ? 'bg-green-500' : 
+                          scan.status === 'running' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
+                        }`}></div>
+                        <span className="text-white font-medium">{scan.target}</span>
+                        <span className="text-gray-400">({formatScanType(scan.scan_type)})</span>
+                      </div>
+                      <Badge variant={scan.status === 'completed' ? 'default' : 'destructive'}>
+                        {scan.status}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {new Date(scan.created_at).toLocaleString()}
+                    </div>
+                    {scan.completed_at && (
+                      <div className="text-xs text-green-400 mt-1">
+                        Completed: {new Date(scan.completed_at).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -287,25 +340,36 @@ export const NetworkScanner = () => {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <Bug size={20} />
-              Critical Vulnerabilities
+              Critical Vulnerabilities ({vulnerabilities.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {vulnerabilities.map((vuln: any, index) => (
-                <div key={index} className="p-4 bg-gray-700/50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-white font-medium">{vuln.title}</span>
-                    <Badge className={getSeverityColor(vuln.severity)}>
-                      {vuln.severity}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-gray-300 mb-2">{vuln.affected_target}</div>
-                  <div className="text-xs text-gray-400">
-                    CVE: {vuln.cve_id || 'N/A'} | CVSS: {vuln.cvss_score || 'N/A'}
-                  </div>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {vulnerabilities.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <Bug className="mx-auto h-12 w-12 text-gray-600 mb-4" />
+                  <p>No vulnerabilities found</p>
+                  <p className="text-sm">Run vulnerability scans to discover security issues</p>
                 </div>
-              ))}
+              ) : (
+                vulnerabilities.map((vuln: any, index) => (
+                  <div key={vuln.id || index} className="p-4 bg-gray-700/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-white font-medium">{vuln.title}</span>
+                      <Badge className={getSeverityColor(vuln.severity)}>
+                        {vuln.severity.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-300 mb-2">{vuln.affected_target}</div>
+                    {vuln.port && (
+                      <div className="text-xs text-blue-400 mb-1">Port: {vuln.port}</div>
+                    )}
+                    <div className="text-xs text-gray-400">
+                      CVE: {vuln.cve_id || 'N/A'} | CVSS: {vuln.cvss_score || 'N/A'}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -316,23 +380,25 @@ export const NetworkScanner = () => {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <FileText size={20} />
-              PII Exposure Findings
+              PII Exposure Findings ({piiFindings.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-96 overflow-y-auto">
               {piiFindings.map((finding: any, index) => (
-                <div key={index} className="p-4 bg-gray-700/50 rounded-lg">
+                <div key={finding.id || index} className="p-4 bg-gray-700/50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-white font-medium">{finding.pii_type.toUpperCase()}</span>
                     <Badge className={getSeverityColor(finding.risk_level)}>
-                      {finding.risk_level}
+                      {finding.risk_level.toUpperCase()}
                     </Badge>
                   </div>
                   <div className="text-sm text-gray-300 mb-1">{finding.file_path}</div>
-                  <div className="text-xs text-gray-400 font-mono bg-gray-800 p-2 rounded">
-                    {finding.context_snippet}
-                  </div>
+                  {finding.context_snippet && (
+                    <div className="text-xs text-gray-400 font-mono bg-gray-800 p-2 rounded">
+                      {finding.context_snippet}
+                    </div>
+                  )}
                   <div className="text-xs text-gray-500 mt-2">
                     Confidence: {(finding.confidence_score * 100).toFixed(1)}% | 
                     Encrypted: {finding.is_encrypted ? 'Yes' : 'No'}
