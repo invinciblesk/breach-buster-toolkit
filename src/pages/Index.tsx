@@ -10,6 +10,7 @@ import { PayloadGenerator } from "@/components/PayloadGenerator";
 import { Reports } from "@/components/Reports";
 import { TargetManager } from "@/components/TargetManager";
 import { SecurityIntegrations } from "@/components/SecurityIntegrations";
+import { Footer } from "@/components/Footer";
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -39,11 +40,14 @@ const Index = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-900 text-green-400 flex w-full">
-        <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-        <main className="flex-1 p-6">
-          {renderActiveSection()}
-        </main>
+      <div className="min-h-screen bg-gray-900 text-green-400 flex w-full flex-col">
+        <div className="flex flex-1 w-full">
+          <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+          <main className="flex-1 p-6">
+            {renderActiveSection()}
+          </main>
+        </div>
+        <Footer />
       </div>
     </SidebarProvider>
   );
