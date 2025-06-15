@@ -21,13 +21,15 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error('Missing authorization header')
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
       console.error('Auth error:', authError)
@@ -36,6 +38,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    console.log(`Authenticated user: ${user.id}`)
 
     const requestBody = await req.json()
     const { target, scanType, parameters } = requestBody
@@ -50,11 +54,11 @@ serve(async (req) => {
 
     console.log(`Starting scan for user ${user.id} on target ${target} with type ${scanType}`)
 
-    // First create a campaign for this scan
+    // First create a campaign for this scan with explicit user_id
     const { data: campaign, error: campaignError } = await supabase
       .from('scan_campaigns')
       .insert({
-        user_id: user.id,
+        user_id: user.id, // Explicitly set the user_id
         name: `Quick ${scanType.replace('_', ' ')} - ${target}`,
         description: `Automated scan campaign for ${target}`,
         target_scope: [target],
@@ -75,7 +79,7 @@ serve(async (req) => {
       })
     }
 
-    console.log('Campaign created:', campaign.id)
+    console.log('Campaign created successfully:', campaign.id)
 
     // Create scan record with campaign association
     const { data: scan, error: scanError } = await supabase
@@ -108,9 +112,9 @@ serve(async (req) => {
       })
     }
 
-    console.log('Scan created:', scan.id)
+    console.log('Scan created successfully:', scan.id)
 
-    // Simulate Nmap scan execution with more realistic results
+    // Simulate scan execution with more realistic results
     console.log(`Executing ${scanType} scan on ${target}`)
     
     // Simulate scan duration

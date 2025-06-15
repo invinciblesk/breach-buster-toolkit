@@ -102,7 +102,7 @@ export type Database = {
           status: Database["public"]["Enums"]["scan_status"] | null
           target_scope: string[]
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -114,7 +114,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["scan_status"] | null
           target_scope: string[]
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -126,7 +126,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["scan_status"] | null
           target_scope?: string[]
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -199,7 +199,7 @@ export type Database = {
           id: string
           report_data: Json | null
           title: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           campaign_id?: string | null
@@ -209,7 +209,7 @@ export type Database = {
           id?: string
           report_data?: Json | null
           title: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           campaign_id?: string | null
@@ -219,7 +219,7 @@ export type Database = {
           id?: string
           report_data?: Json | null
           title?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
