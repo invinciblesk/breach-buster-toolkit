@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,6 +77,22 @@ export const TargetManager = () => {
     });
 
     console.log("Added new target:", target);
+  };
+
+  const handleScan = (targetId: number, targetName: string) => {
+    toast({
+      title: "Scanning Target",
+      description: `Starting scan for ${targetName}...`,
+    });
+    console.log(`Scanning target with ID: ${targetId}, Name: ${targetName}`);
+  };
+
+  const handleAssessVulnerability = (targetId: number, targetName: string) => {
+    toast({
+      title: "Assessing Vulnerability",
+      description: `Starting vulnerability assessment for ${targetName}...`,
+    });
+    console.log(`Assessing vulnerability for target with ID: ${targetId}, Name: ${targetName}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -204,11 +219,11 @@ export const TargetManager = () => {
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 flex-1">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 flex-1" onClick={() => handleScan(target.id, target.name)}>
                   <Search size={14} className="mr-1" />
                   Scan
                 </Button>
-                <Button size="sm" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                <Button size="sm" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700" onClick={() => handleAssessVulnerability(target.id, target.name)}>
                   <Shield size={14} />
                 </Button>
               </div>
