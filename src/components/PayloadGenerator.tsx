@@ -13,7 +13,7 @@ import { PayloadOutputCard } from "./payload-generator/PayloadOutputCard";
 import { payloadTemplates, advancedVulns } from "./payload-generator/payloadUtils";
 
 // Advanced/professional payloads with explanation and context
-const payloadTemplates = {
+const payloadTemplates_removed = {
   "sql-injection": {
     name: "SQL Injection (Bypass Auth + Dump)",
     template: `' OR 1=1;-- \n' UNION SELECT username, password FROM users;--`,
@@ -65,7 +65,7 @@ const payloadTemplates = {
   }
 };
 
-const advancedVulns = [
+const advancedVulns_removed = [
   {
     id: "CVE-2023-1234",
     title: "SQL Injection in Login Form",
