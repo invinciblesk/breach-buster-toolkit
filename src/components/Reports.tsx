@@ -9,6 +9,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -147,7 +148,7 @@ export const Reports = () => {
       )
     );
     toast({
-      title: "Report Reviewed",
+      title: "Report Completed",
       description: `Report has been marked as completed.`,
     });
   };
@@ -361,24 +362,14 @@ export const Reports = () => {
                         </Button>
                       )}
                       {report.status === "draft" && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePreviewReport(report)}
-                            className="text-white border-gray-500 hover:bg-gray-600 hover:text-white"
-                          >
-                            <Eye size={14} className="mr-1" />
-                            Preview
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleReviewReport(report.id)}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-black"
-                          >
-                            Review
-                          </Button>
-                        </>
+                        <Button
+                          size="sm"
+                          onClick={() => handlePreviewReport(report)}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                        >
+                          <Eye size={14} className="mr-1" />
+                          Review
+                        </Button>
                       )}
                       <Button
                         size="icon"
@@ -519,6 +510,28 @@ export const Reports = () => {
                 </ul>
               </div>
             </div>
+            <DialogFooter className="pt-4 sm:justify-start gap-2">
+                <Button
+                    variant="outline"
+                    onClick={() => handleDownloadReport(reportToPreview.name)}
+                    className="text-white border-gray-500 hover:bg-gray-600 hover:text-white"
+                >
+                    <Download size={14} className="mr-1" />
+                    Download
+                </Button>
+                {reportToPreview.status === 'draft' && (
+                    <Button
+                        onClick={() => {
+                            handleReviewReport(reportToPreview.id);
+                            setReportToPreview(null);
+                        }}
+                        className="bg-green-600 hover:bg-green-700"
+                    >
+                        <ShieldCheck size={14} className="mr-1" />
+                        Mark as Completed
+                    </Button>
+                )}
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
