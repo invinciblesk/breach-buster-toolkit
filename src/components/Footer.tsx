@@ -8,7 +8,7 @@ export const Footer = () => (
       <span>2025 Simon Kanyiva. All rights reserved.</span>
     </div>
     <span className="mt-1">
-      <b>Breach Buster Toolkit™</b> is a product of <span className="font-semibold text-green-500">InvinsibleSKLabs</span>.
+      CyberPro Pro™ is a product of Breach Buster Toolkit Labs.
     </span>
   </footer>
 );

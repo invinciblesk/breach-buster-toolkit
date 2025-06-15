@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,9 +14,11 @@ export const SecurityIntegrations = () => {
   const [logs, setLogs] = useState([]);
   const [selectedTool, setSelectedTool] = useState("");
   const [eventType, setEventType] = useState("vulnerability_detected");
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const fetchIntegrations = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('security_tools')
@@ -32,6 +33,7 @@ export const SecurityIntegrations = () => {
     } catch (error) {
       console.error('Error:', error);
     }
+    setLoading(false);
   };
 
   const fetchLogs = async () => {
@@ -58,6 +60,7 @@ export const SecurityIntegrations = () => {
   useEffect(() => {
     fetchIntegrations();
     fetchLogs();
+    // eslint-disable-next-line
   }, []);
 
   const handleToggleIntegration = async (id: string, isActive: boolean) => {
@@ -176,26 +179,35 @@ export const SecurityIntegrations = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {integrations.map((integration: any) => (
-                <div key={integration.id} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {getIntegrationIcon(integration.type)}
-                    <div>
-                      <div className="text-white font-medium">{integration.name}</div>
-                      <div className="text-sm text-gray-400 capitalize">{integration.type}</div>
+              {loading ? (
+                <div className="text-gray-400 text-center py-8">Loading integrations...</div>
+              ) : integrations.length === 0 ? (
+                <div className="text-gray-400 text-center py-8">
+                  No integrations found. <br /> Please add or activate an integration.
+                </div>
+              ) : (
+                integrations.map((integration: any) => (
+                  <div key={integration.id} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {getIntegrationIcon(integration.type)}
+                      <div>
+                        <div className="text-white font-medium">{integration.name}</div>
+                        <div className="text-sm text-gray-400 capitalize">{integration.type}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant={integration.is_active ? 'default' : 'secondary'}>
+                        {integration.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                      <Switch
+                        checked={integration.is_active}
+                        onCheckedChange={(checked) => handleToggleIntegration(integration.id, checked)}
+                        aria-label="Toggle integration active"
+                      />
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant={integration.is_active ? 'default' : 'secondary'}>
-                      {integration.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                    <Switch
-                      checked={integration.is_active}
-                      onCheckedChange={(checked) => handleToggleIntegration(integration.id, checked)}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -252,27 +264,33 @@ export const SecurityIntegrations = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {logs.map((log: any, index) => (
-              <div key={index} className="p-4 bg-gray-700/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-white font-medium">{log.security_tools?.name}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {log.event_type}
+            {logs.length === 0 ? (
+              <div className="text-gray-400 text-center py-8">
+                No logs found.
+              </div>
+            ) : (
+              logs.map((log: any, index) => (
+                <div key={index} className="p-4 bg-gray-700/50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white font-medium">{log.security_tools?.name}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {log.event_type}
+                      </Badge>
+                    </div>
+                    <Badge className={getStatusColor(log.status)}>
+                      {log.status}
                     </Badge>
                   </div>
-                  <Badge className={getStatusColor(log.status)}>
-                    {log.status}
-                  </Badge>
+                  <div className="text-sm text-gray-300 mb-2">
+                    Type: {log.security_tools?.type} | Event: {log.event_type}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {log.created_at ? new Date(log.created_at).toLocaleString() : ""}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-300 mb-2">
-                  Type: {log.security_tools?.type} | Event: {log.event_type}
-                </div>
-                <div className="text-xs text-gray-400">
-                  {new Date(log.created_at).toLocaleString()}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
