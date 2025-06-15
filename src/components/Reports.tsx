@@ -505,18 +505,18 @@ export const Reports = () => {
                       variant="outline" 
                       onClick={() => handlePreview(report.name)}
                       className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                      title="Preview Report"
                     >
-                      <Eye size={14} className="mr-1" />
-                      Preview
+                      <Eye size={14} />
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
                       onClick={() => handleDownload(report.name)}
                       className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                      title="Download Report"
                     >
-                      <Download size={14} className="mr-1" />
-                      Download
+                      <Download size={14} />
                     </Button>
                     {report.status === 'completed' && !report.reviewed && (
                       <Button 
@@ -524,9 +524,9 @@ export const Reports = () => {
                         variant="outline" 
                         onClick={() => handleMarkComplete(report.id, report.name)}
                         className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white"
+                        title="Mark as Reviewed"
                       >
-                        <CheckCircle size={14} className="mr-1" />
-                        Mark Complete
+                        <CheckCircle size={14} />
                       </Button>
                     )}
                     <Button 
@@ -534,6 +534,7 @@ export const Reports = () => {
                       variant="outline" 
                       onClick={() => handleDeleteReport(report.id, report.name)}
                       className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                      title="Delete Report"
                     >
                       <Trash2 size={14} />
                     </Button>
