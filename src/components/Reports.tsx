@@ -83,6 +83,11 @@ export const Reports = () => {
   const [deleteTarget, setDeleteTarget] = useState<'single' | 'selected' | 'all' | null>(null);
   const [singleReportToDelete, setSingleReportToDelete] = useState<Report | null>(null);
 
+  const totalReports = reports.length;
+  const completedReports = reports.filter(r => r.status === 'completed').length;
+  const inProgressReports = reports.filter(r => r.status === 'processing').length;
+  const draftReports = reports.filter(r => r.status === 'draft').length;
+
   const handleGenerateReport = () => {
     if (!reportType) {
       toast({
@@ -412,7 +417,7 @@ export const Reports = () => {
             <CardTitle className="text-white text-sm">Total Reports</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">24</div>
+            <div className="text-2xl font-bold text-white">{totalReports}</div>
             <p className="text-gray-400 text-xs">Generated this month</p>
           </CardContent>
         </Card>
@@ -422,7 +427,7 @@ export const Reports = () => {
             <CardTitle className="text-white text-sm">Completed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-400">20</div>
+            <div className="text-2xl font-bold text-green-400">{completedReports}</div>
             <p className="text-gray-400 text-xs">Ready for download</p>
           </CardContent>
         </Card>
@@ -432,7 +437,7 @@ export const Reports = () => {
             <CardTitle className="text-white text-sm">In Progress</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-400">3</div>
+            <div className="text-2xl font-bold text-blue-400">{inProgressReports}</div>
             <p className="text-gray-400 text-xs">Currently generating</p>
           </CardContent>
         </Card>
@@ -442,7 +447,7 @@ export const Reports = () => {
             <CardTitle className="text-white text-sm">Draft</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-400">1</div>
+            <div className="text-2xl font-bold text-orange-400">{draftReports}</div>
             <p className="text-gray-400 text-xs">Pending review</p>
           </CardContent>
         </Card>
