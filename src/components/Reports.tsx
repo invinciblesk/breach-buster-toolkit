@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Download, FileText, Lock, Eye } from "lucide-react";
+import { Calendar, Download, FileText, Lock, Eye, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -140,6 +140,26 @@ export const Reports = () => {
       default: return "bg-gray-600";
     }
   };
+
+  const getSeverityBadgeColor = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case "high": return "bg-red-600";
+      case "medium": return "bg-orange-600";
+      case "low": return "bg-yellow-600";
+      default: return "bg-gray-600";
+    }
+  };
+
+  const getSeverityBorderColor = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case "high": return "border-red-500";
+      case "medium": return "border-orange-500";
+      case "low": return "border-yellow-500";
+      default: return "border-gray-500";
+    }
+  };
+
+  const mockVulnerabilityTypes = ["SQL Injection", "Cross-Site Scripting", "Directory Traversal", "Insecure Deserialization", "Command Injection", "Weak Authentication"];
 
   return (
     <div className="space-y-6">
@@ -299,36 +319,68 @@ export const Reports = () => {
       
       {reportToPreview && (
         <Dialog open={!!reportToPreview} onOpenChange={(isOpen) => !isOpen && setReportToPreview(null)}>
-          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
+          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-4xl">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 text-2xl">
                 <FileText /> {reportToPreview.name}
               </DialogTitle>
               <DialogDescription className="text-gray-400 pt-2">
-                Report Type: {reportToPreview.type}
+                Report Type: {reportToPreview.type} | Date: {reportToPreview.date} | Status: <span className="capitalize">{reportToPreview.status}</span>
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4 text-sm">
-              <div className="flex items-center gap-2">
-                <Calendar size={14} className="text-gray-400" />
-                <span className="text-gray-300">Date: {reportToPreview.date}</span>
+            <div className="space-y-8 py-4 max-h-[70vh] overflow-y-auto pr-6">
+              <div>
+                <h3 className="font-semibold text-xl mb-3 text-white border-b border-gray-700 pb-2">Executive Summary</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  This report details the findings of a {reportToPreview.type} assessment conducted on {reportToPreview.date}. 
+                  The automated scan identified <span className="text-red-400 font-medium">{reportToPreview.vulnerabilities}</span> vulnerabilities across <span className="text-blue-400 font-medium">{reportToPreview.targets}</span> scanned targets. 
+                  Immediate remediation is recommended for high-risk findings to mitigate potential security threats. This report provides a detailed breakdown of each vulnerability found, along with actionable recommendations.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge className={getStatusColor(reportToPreview.status) + " text-white"}>{reportToPreview.status}</Badge>
+
+              <div>
+                <h3 className="font-semibold text-xl mb-3 text-white border-b border-gray-700 pb-2">Vulnerability Findings</h3>
+                {reportToPreview.vulnerabilities > 0 ? (
+                  <div className="space-y-4 mt-4">
+                    {Array.from({ length: reportToPreview.vulnerabilities }).map((_, index) => {
+                        const severities = ["High", "Medium", "Low"];
+                        const severity = severities[index % 3]; // Cycle through severities for variety
+                        return (
+                            <div key={index} className={`p-4 bg-gray-900/50 rounded-lg border-l-4 ${getSeverityBorderColor(severity)}`}>
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-white font-medium">
+                                        {mockVulnerabilityTypes[Math.floor(Math.random() * mockVulnerabilityTypes.length)]}
+                                    </h4>
+                                    <Badge className={getSeverityBadgeColor(severity)}>{severity}</Badge>
+                                </div>
+                                <p className="text-gray-400 text-xs mt-1">
+                                    Target: 10.0.{Math.floor(Math.random() * 255)}.{Math.floor(Math.random() * 255)}
+                                </p>
+                                <p className="text-gray-300 text-sm mt-2">
+                                    A potential vulnerability was identified. Automated analysis suggests a risk of unauthorized access or data exposure. Further investigation and patching are required.
+                                </p>
+                            </div>
+                        );
+                    })}
+                  </div>
+                ) : (
+                    <div className="text-center py-8 bg-gray-900/50 rounded-lg mt-4">
+                        <ShieldCheck size={48} className="mx-auto text-green-500" />
+                        <h4 className="mt-4 text-xl font-semibold text-white">No Vulnerabilities Found</h4>
+                        <p className="text-gray-400 mt-2">The automated scan did not detect any vulnerabilities for the selected targets.</p>
+                    </div>
+                )}
               </div>
-              <div className="text-gray-300 col-span-2">
-                <span className="text-red-400 font-medium">{reportToPreview.vulnerabilities}</span> vulnerabilities found across <span className="text-blue-400 font-medium">{reportToPreview.targets}</span> targets.
-              </div>
-            </div>
-            <div className="bg-gray-900/50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2 text-white">Report Content Preview</h4>
-              <p className="text-gray-400 text-xs">
-                This is a placeholder for the report preview content. In a real application, this would show a summary or the full content of the report. For now, it just shows the key details.
-              </p>
-              <div className="mt-4 space-y-2 text-xs text-gray-300">
-                <p><strong>Vulnerability Analysis:</strong> High-risk vulnerabilities detected on web servers, requiring immediate patching.</p>
-                <p><strong>Target Scope:</strong> Includes all public-facing web applications and associated APIs.</p>
-                <p><strong>Recommendations:</strong> Apply security patches, update firewall rules, and conduct a follow-up scan.</p>
+              
+              <div>
+                <h3 className="font-semibold text-xl mb-3 text-white border-b border-gray-700 pb-2">Recommendations</h3>
+                <ul className="list-disc list-inside text-gray-400 text-sm space-y-2 mt-4">
+                    <li>Prioritize remediation for any vulnerabilities classified as 'High' or 'Medium' severity.</li>
+                    <li>Review application and server logs for any signs of suspicious activity related to the identified findings.</li>
+                    <li>Apply security patches and updates recommended by vendors for all affected software and systems.</li>
+                    <li>Conduct follow-up scans after remediation to verify that vulnerabilities have been successfully addressed.</li>
+                    <li>Ensure security configurations are hardened according to industry best practices (e.g., CIS Benchmarks).</li>
+                </ul>
               </div>
             </div>
           </DialogContent>
