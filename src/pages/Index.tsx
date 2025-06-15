@@ -1,6 +1,7 @@
 
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { NetworkScanner } from "@/components/NetworkScanner";
 import { VulnerabilityAssessment } from "@/components/VulnerabilityAssessment";
@@ -31,12 +32,14 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-green-400 flex">
-      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-      <main className="flex-1 p-6">
-        {renderActiveSection()}
-      </main>
-    </div>
+    <SidebarProvider>
+      <div className="min-h-screen bg-gray-900 text-green-400 flex w-full">
+        <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+        <main className="flex-1 p-6">
+          {renderActiveSection()}
+        </main>
+      </div>
+    </SidebarProvider>
   );
 };
 
