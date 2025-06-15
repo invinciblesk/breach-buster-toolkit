@@ -1,0 +1,235 @@
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Download, FileText, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+export const Reports = () => {
+  const [reportType, setReportType] = useState("");
+  const { toast } = useToast();
+
+  const reports = [
+    {
+      id: 1,
+      name: "Q1 2024 Security Assessment",
+      type: "Comprehensive",
+      date: "2024-01-15",
+      status: "completed",
+      vulnerabilities: 12,
+      targets: 5
+    },
+    {
+      id: 2,
+      name: "Web Application Pentest",
+      type: "Web Security",
+      date: "2024-01-10",
+      status: "completed",
+      vulnerabilities: 8,
+      targets: 2
+    },
+    {
+      id: 3,
+      name: "Network Infrastructure Scan",
+      type: "Network Security",
+      date: "2024-01-08",
+      status: "completed",
+      vulnerabilities: 15,
+      targets: 10
+    },
+    {
+      id: 4,
+      name: "Monthly Security Review",
+      type: "Executive Summary",
+      date: "2024-01-05",
+      status: "draft",
+      vulnerabilities: 20,
+      targets: 8
+    }
+  ];
+
+  const handleGenerateReport = () => {
+    if (!reportType) {
+      toast({
+        title: "Error",
+        description: "Please select a report type",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Report Generation Started",
+      description: `Generating ${reportType} report...`,
+    });
+
+    console.log("Generating report of type:", reportType);
+  };
+
+  const handleDownloadReport = (reportName: string) => {
+    toast({
+      title: "Download Started",
+      description: `Downloading ${reportName}...`,
+    });
+    console.log("Downloading report:", reportName);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed": return "bg-green-600";
+      case "draft": return "bg-orange-600";
+      case "processing": return "bg-blue-600";
+      default: return "bg-gray-600";
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-white">Reports</h1>
+        <p className="text-gray-400 mt-1">Generate and manage security assessment reports</p>
+      </div>
+
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <FileText size={20} />
+            Generate New Report
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Report Type</label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                  <SelectValue placeholder="Select report type" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="comprehensive" className="text-white hover:bg-gray-600">
+                    Comprehensive Security Assessment
+                  </SelectItem>
+                  <SelectItem value="web-security" className="text-white hover:bg-gray-600">
+                    Web Application Security
+                  </SelectItem>
+                  <SelectItem value="network-security" className="text-white hover:bg-gray-600">
+                    Network Security Assessment
+                  </SelectItem>
+                  <SelectItem value="executive-summary" className="text-white hover:bg-gray-600">
+                    Executive Summary
+                  </SelectItem>
+                  <SelectItem value="compliance" className="text-white hover:bg-gray-600">
+                    Compliance Report
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleGenerateReport}
+                className="bg-green-600 hover:bg-green-700 w-full"
+              >
+                Generate Report
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Report History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {reports.map((report) => (
+              <div key={report.id} className="p-4 bg-gray-700/50 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <Lock size={18} className="text-gray-400" />
+                    <div>
+                      <h3 className="text-white font-medium">{report.name}</h3>
+                      <p className="text-gray-400 text-sm">{report.type}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(report.status)}>
+                      {report.status}
+                    </Badge>
+                    {report.status === "completed" && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleDownloadReport(report.name)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Download size={14} className="mr-1" />
+                        Download
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-gray-400" />
+                    <span className="text-gray-300">{report.date}</span>
+                  </div>
+                  <div className="text-gray-300">
+                    <span className="text-red-400 font-medium">{report.vulnerabilities}</span> vulnerabilities found
+                  </div>
+                  <div className="text-gray-300">
+                    <span className="text-blue-400 font-medium">{report.targets}</span> targets scanned
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white text-sm">Total Reports</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">24</div>
+            <p className="text-gray-400 text-xs">Generated this month</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white text-sm">Completed</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-400">20</div>
+            <p className="text-gray-400 text-xs">Ready for download</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white text-sm">In Progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-400">3</div>
+            <p className="text-gray-400 text-xs">Currently generating</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white text-sm">Draft</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-400">1</div>
+            <p className="text-gray-400 text-xs">Pending review</p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
