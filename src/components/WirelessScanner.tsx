@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wifi, Bluetooth, Search, Play, Square, Shield, AlertTriangle, Lock, Download, Server } from "lucide-react";
+import { Wifi, Bluetooth, Search, Play, Square, Shield, AlertTriangle, Lock, Download, Server, Cpu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -125,14 +125,21 @@ export const WirelessScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [activeTab, setActiveTab] = useState("wifi");
-  const [useRealScanning, setUseRealScanning] = useState(true);
+  const [useLocalScanning, setUseLocalScanning] = useState(true);
   const [scanResults, setScanResults] = useState<any>(null);
+  const [localServerStatus, setLocalServerStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
   const { toast } = useToast();
   const { session } = useAuth();
   const [foundWifiNetworks, setFoundWifiNetworks] = useState<WifiNetwork[]>([]);
   const [foundBluetoothDevices, setFoundBluetoothDevices] = useState<BluetoothDevice[]>([]);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Check local server status on component mount
+  useEffect(() => {
+    checkLocalServerStatus();
+  }, []);
+
+  // Cleanup function
   useEffect(() => {
     return () => {
       if (scanIntervalRef.current) {
@@ -141,17 +148,23 @@ export const WirelessScanner = () => {
     };
   }, []);
 
-  const handleRealScan = async () => {
-    if (!session) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to perform real wireless scanning",
-        variant: "destructive",
-      });
-      return;
+  const checkLocalServerStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/health');
+      if (response.ok) {
+        setLocalServerStatus('available');
+        console.log('Local wireless scanner server is available');
+      } else {
+        setLocalServerStatus('unavailable');
+      }
+    } catch (error) {
+      setLocalServerStatus('unavailable');
+      console.log('Local wireless scanner server is not running');
     }
+  };
 
-    console.log(`Starting real ${activeTab} scan`);
+  const handleLocalScan = async () => {
+    console.log(`Starting local ${activeTab} scan`);
     setIsScanning(true);
     setScanProgress(0);
     
@@ -173,58 +186,55 @@ export const WirelessScanner = () => {
         });
       }, 500);
 
-      const { data, error } = await supabase.functions.invoke('wireless-scanner', {
-        body: { 
-          scanType: activeTab === 'wifi' ? 'wifi' : 'bluetooth'
-        }
+      const endpoint = activeTab === 'wifi' ? '/scan/wifi' : '/scan/bluetooth';
+      const response = await fetch(`http://localhost:3001${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       clearInterval(progressInterval);
       setScanProgress(100);
 
-      if (error) {
-        console.error('Real scan error:', error);
-        toast({
-          title: "Scan Failed",
-          description: `Real scanning failed: ${error.message}. Falling back to demo mode.`,
-          variant: "destructive",
-        });
-        // Fallback to mock data
-        handleMockScan();
-        return;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log('Real scan results:', data);
+      const data = await response.json();
+      console.log('Local scan results:', data);
       setScanResults(data);
 
-      if (data.results) {
-        if (activeTab === 'wifi' && data.results.networks) {
-          setFoundWifiNetworks(data.results.networks);
+      if (data.success) {
+        if (activeTab === 'wifi' && data.networks) {
+          setFoundWifiNetworks(data.networks);
           toast({
-            title: "Real WiFi Scan Complete",
-            description: `Found ${data.results.networks.length} networks on ${data.platform}`,
+            title: "Local WiFi Scan Complete",
+            description: `Found ${data.networks.length} networks on ${data.platform}`,
           });
-        } else if (activeTab === 'bluetooth' && data.results.devices) {
-          setFoundBluetoothDevices(data.results.devices);
+        } else if (activeTab === 'bluetooth' && data.devices) {
+          setFoundBluetoothDevices(data.devices);
           toast({
-            title: "Real Bluetooth Scan Complete", 
-            description: `Found ${data.results.devices.length} devices on ${data.platform}`,
+            title: "Local Bluetooth Scan Complete", 
+            description: `Found ${data.devices.length} devices on ${data.platform}`,
           });
         }
 
-        if (data.results.message) {
+        if (data.message) {
           toast({
             title: "Scan Information",
-            description: data.results.message,
+            description: data.message,
           });
         }
+      } else {
+        throw new Error(data.error || 'Local scan failed');
       }
 
     } catch (error: any) {
-      console.error('Real scan network error:', error);
+      console.error('Local scan error:', error);
       toast({
-        title: "Network Error",
-        description: "Failed to connect to scanning service. Using demo mode.",
+        title: "Local Scan Failed",
+        description: `${error.message}. Falling back to demo mode.`,
         variant: "destructive",
       });
       // Fallback to mock data
@@ -278,8 +288,8 @@ export const WirelessScanner = () => {
   };
 
   const handleStartScan = () => {
-    if (useRealScanning) {
-      handleRealScan();
+    if (useLocalScanning && localServerStatus === 'available') {
+      handleLocalScan();
     } else {
       handleMockScan();
     }
@@ -334,15 +344,33 @@ export const WirelessScanner = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white">Wireless Scanner</h1>
-        <p className="text-gray-400 mt-1">Discover WiFi networks and Bluetooth devices with real scanning capabilities</p>
+        <p className="text-gray-400 mt-1">Discover WiFi networks and Bluetooth devices with real local scanning</p>
       </div>
+
+      {localServerStatus === 'available' && (
+        <Alert className="bg-green-900/50 border-green-600">
+          <Server className="h-4 w-4" />
+          <AlertDescription className="text-green-200">
+            Local wireless scanner server is running on localhost:3001. Real scanning is available!
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {localServerStatus === 'unavailable' && (
+        <Alert className="bg-yellow-900/50 border-yellow-600">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-yellow-200">
+            Local scanner server not detected. Install dependencies with `cd server && npm install` then run `npm start`. Using demo mode for now.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {scanResults && scanResults.platform && (
         <Alert className="bg-blue-900/50 border-blue-600">
-          <Server className="h-4 w-4" />
+          <Cpu className="h-4 w-4" />
           <AlertDescription className="text-blue-200">
-            Real scanning performed on {scanResults.platform} platform. 
-            {scanResults.results?.message && ` ${scanResults.results.message}`}
+            Local scanning performed on {scanResults.platform} platform. 
+            {scanResults.message && ` ${scanResults.message}`}
           </AlertDescription>
         </Alert>
       )}
@@ -359,15 +387,23 @@ export const WirelessScanner = () => {
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id="realScanning"
-                checked={useRealScanning}
-                onChange={(e) => setUseRealScanning(e.target.checked)}
+                id="localScanning"
+                checked={useLocalScanning}
+                onChange={(e) => setUseLocalScanning(e.target.checked)}
                 className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded"
               />
-              <label htmlFor="realScanning" className="text-gray-300 text-sm">
-                Use Real Scanning (requires server deployment)
+              <label htmlFor="localScanning" className="text-gray-300 text-sm">
+                Use Local Scanning Server ({localServerStatus})
               </label>
             </div>
+            <Button
+              onClick={checkLocalServerStatus}
+              disabled={isScanning}
+              variant="outline"
+              size="sm"
+            >
+              Refresh Status
+            </Button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -391,7 +427,7 @@ export const WirelessScanner = () => {
                 className="bg-green-600 hover:bg-green-700"
               >
                 <Play size={16} className="mr-2" />
-                {useRealScanning ? 'Real Scan' : 'Demo Scan'}
+                {useLocalScanning && localServerStatus === 'available' ? 'Local Scan' : 'Demo Scan'}
               </Button>
               <Button
                 onClick={handleStopScan}
@@ -408,7 +444,7 @@ export const WirelessScanner = () => {
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-gray-300">
-                  {useRealScanning ? 'Real' : 'Demo'} Scanning {activeTab === 'wifi' ? 'WiFi Networks' : 'Bluetooth Devices'}
+                  {useLocalScanning && localServerStatus === 'available' ? 'Local' : 'Demo'} Scanning {activeTab === 'wifi' ? 'WiFi Networks' : 'Bluetooth Devices'}
                 </span>
                 <span className="text-green-400">{scanProgress}%</span>
               </div>
@@ -528,31 +564,40 @@ export const WirelessScanner = () => {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <Server size={20} />
-            Real Scanning Information
+            Local Scanning Setup
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 text-gray-300">
             <div>
-              <h4 className="font-semibold text-white mb-2">Platform Support:</h4>
+              <h4 className="font-semibold text-white mb-2">Quick Setup:</h4>
+              <div className="bg-gray-900 p-4 rounded-lg font-mono text-sm">
+                <div className="text-gray-400"># Install and start the local scanner server</div>
+                <div className="text-green-400">cd server</div>
+                <div className="text-green-400">npm install</div>
+                <div className="text-green-400">npm start</div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-2">Platform Requirements:</h4>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li><strong>Linux:</strong> Uses iwlist (WiFi) and hcitool (Bluetooth)</li>
-                <li><strong>macOS:</strong> Uses airport utility (WiFi only)</li>
-                <li><strong>Windows:</strong> Uses netsh wlan (limited WiFi info)</li>
+                <li><strong>Linux:</strong> sudo access for iwlist/nmcli (WiFi) and hcitool (Bluetooth)</li>
+                <li><strong>macOS:</strong> airport utility (WiFi) - may require developer tools</li>
+                <li><strong>Windows:</strong> netsh wlan (limited WiFi info) - run as administrator</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-2">Requirements:</h4>
+              <h4 className="font-semibold text-white mb-2">Permissions:</h4>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Server deployment with appropriate system permissions</li>
-                <li>Required scanning tools installed (iwlist, hcitool, etc.)</li>
-                <li>Root/admin privileges may be needed for some operations</li>
+                <li>WiFi scanning may require elevated privileges</li>
+                <li>Bluetooth scanning requires Bluetooth to be enabled</li>
+                <li>Some tools may need to be installed separately (iwlist, hcitool, etc.)</li>
               </ul>
             </div>
-            <Alert className="bg-yellow-900/50 border-yellow-600">
+            <Alert className="bg-blue-900/50 border-blue-600">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-yellow-200">
-                Real scanning requires deployment to a server environment. In serverless/browser environments, demo mode will be used automatically.
+              <AlertDescription className="text-blue-200">
+                The local scanner server must be running for real wireless scanning. If the server is not available, the application will automatically fall back to demo mode.
               </AlertDescription>
             </Alert>
           </div>
