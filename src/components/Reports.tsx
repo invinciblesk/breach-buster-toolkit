@@ -349,7 +349,7 @@ export const Reports = () => {
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
-      </div>
+      </Card>
 
       {/* Generate New Report */}
       <Card className="bg-gray-800 border-gray-700">
