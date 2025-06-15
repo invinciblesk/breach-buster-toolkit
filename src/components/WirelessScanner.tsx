@@ -1,11 +1,10 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wifi, Bluetooth, Search, Play, Square, Shield, AlertTriangle, Lock } from "lucide-react";
+import { Wifi, Bluetooth, Search, Play, Square, Shield, AlertTriangle, Lock, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -211,6 +210,13 @@ export const WirelessScanner = () => {
     return { strength: "Poor", color: "text-red-400" };
   };
 
+  const handleDownloadClick = (platform: 'Android' | 'iOS') => {
+    toast({
+      title: 'Coming Soon!',
+      description: `The ${platform} app is not yet available. This feature will enable live network scanning directly from your device.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -377,6 +383,31 @@ export const WirelessScanner = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Download size={20} />
+            Get Live Scanning on Mobile
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-400 mb-4">
+            For security reasons, web browsers cannot access your device's WiFi hardware. To perform a live scan, please download our mobile application.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button onClick={() => handleDownloadClick('Android')} className="bg-blue-600 hover:bg-blue-700 flex-1">
+              <Download size={16} className="mr-2" />
+              Download for Android
+            </Button>
+            <Button onClick={() => handleDownloadClick('iOS')} className="bg-gray-600 hover:bg-gray-700 flex-1" disabled>
+              <Download size={16} className="mr-2" />
+              Download for iOS (Coming Soon)
+            </Button>
+          </div>
+           <p className="text-xs text-gray-500 mt-4">Note: Live scanning is currently supported on Android. iOS has platform restrictions that prevent WiFi scanning by third-party apps.</p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
