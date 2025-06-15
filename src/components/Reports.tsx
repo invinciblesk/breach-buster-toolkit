@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,8 @@ import {
   TrendingUp,
   BarChart3,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -44,7 +44,8 @@ export const Reports = () => {
       status: "completed",
       findings: 23,
       criticalIssues: 5,
-      size: "2.4 MB"
+      size: "2.4 MB",
+      reviewed: false
     },
     {
       id: 2,
@@ -54,7 +55,8 @@ export const Reports = () => {
       status: "completed",
       findings: 18,
       criticalIssues: 3,
-      size: "1.8 MB"
+      size: "1.8 MB",
+      reviewed: true
     },
     {
       id: 3,
@@ -64,7 +66,8 @@ export const Reports = () => {
       status: "in-progress",
       findings: 12,
       criticalIssues: 2,
-      size: "1.2 MB"
+      size: "1.2 MB",
+      reviewed: false
     }
   ]);
   const [selectedReports, setSelectedReports] = useState<number[]>([]);
@@ -111,6 +114,28 @@ export const Reports = () => {
     console.log(`Downloading report: ${reportName}`);
   };
 
+  const handlePreview = (reportName: string) => {
+    toast({
+      title: "Opening Preview",
+      description: `${reportName} is being opened for preview...`,
+    });
+    console.log(`Previewing report: ${reportName}`);
+  };
+
+  const handleMarkComplete = (reportId: number, reportName: string) => {
+    setReports(prev => prev.map(report => 
+      report.id === reportId 
+        ? { ...report, reviewed: true }
+        : report
+    ));
+    
+    toast({
+      title: "Report Marked Complete",
+      description: `${reportName} has been marked as reviewed.`,
+    });
+    console.log(`Marking report ${reportId} as complete`);
+  };
+
   const handleGenerate = () => {
     setIsGenerating(true);
     toast({
@@ -129,7 +154,8 @@ export const Reports = () => {
         status: "completed" as const,
         findings: Math.floor(Math.random() * 30) + 10,
         criticalIssues: Math.floor(Math.random() * 8) + 1,
-        size: `${(Math.random() * 3 + 1).toFixed(1)} MB`
+        size: `${(Math.random() * 3 + 1).toFixed(1)} MB`,
+        reviewed: false
       };
       
       setReports(prev => [newReport, ...prev]);
@@ -314,7 +340,7 @@ export const Reports = () => {
                 />
                 <Legend />
                 <Bar dataKey="vulnerabilities" fill="#ef4444" name="Found" />
-                <Bar dataKey="resolved" fill="#22c55e" name="Resolved" />
+                <Bar dataKey="resolved" fill="##22c55e" name="Resolved" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -433,7 +459,7 @@ export const Reports = () => {
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-700">
                   <Checkbox
                     checked={selectedReports.length === reports.length}
-                    onCheckedChange={handleSelectAll}
+                    onCheckedChange={(checked) => handleSelectAll(checked === true)}
                     className="border-gray-500"
                   />
                   <span className="text-sm text-gray-400">
@@ -446,7 +472,7 @@ export const Reports = () => {
                 <div key={report.id} className="flex items-center gap-3 p-4 bg-gray-700 rounded-lg">
                   <Checkbox
                     checked={selectedReports.includes(report.id)}
-                    onCheckedChange={(checked) => handleSelectReport(report.id, checked)}
+                    onCheckedChange={(checked) => handleSelectReport(report.id, checked === true)}
                     className="border-gray-500"
                   />
                   <div className="flex-1">
@@ -456,6 +482,11 @@ export const Reports = () => {
                       <Badge className={getStatusColor(report.status)}>
                         {report.status}
                       </Badge>
+                      {report.reviewed && (
+                        <Badge className="bg-green-600">
+                          Reviewed
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-6 text-sm text-gray-400">
                       <span className="flex items-center gap-1">
@@ -472,12 +503,32 @@ export const Reports = () => {
                     <Button 
                       size="sm" 
                       variant="outline" 
+                      onClick={() => handlePreview(report.name)}
+                      className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                    >
+                      <Eye size={14} className="mr-1" />
+                      Preview
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
                       onClick={() => handleDownload(report.name)}
                       className="border-gray-600 text-gray-300 hover:bg-gray-600"
                     >
                       <Download size={14} className="mr-1" />
                       Download
                     </Button>
+                    {!report.reviewed && report.status === 'completed' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleMarkComplete(report.id, report.name)}
+                        className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white"
+                      >
+                        <CheckCircle size={14} className="mr-1" />
+                        Mark Complete
+                      </Button>
+                    )}
                     <Button 
                       size="sm" 
                       variant="outline" 
