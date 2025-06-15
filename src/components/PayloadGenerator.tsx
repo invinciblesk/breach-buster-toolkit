@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Code, Copy } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Code, Copy, Bug, AlertTriangle, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export const PayloadGenerator = () => {
@@ -13,7 +14,44 @@ export const PayloadGenerator = () => {
   const [target, setTarget] = useState("");
   const [parameters, setParameters] = useState("");
   const [generatedPayload, setGeneratedPayload] = useState("");
+  const [selectedVulnerability, setSelectedVulnerability] = useState("");
   const { toast } = useToast();
+
+  // Mock vulnerabilities data (in a real app, this would come from a shared state/context)
+  const vulnerabilities = [
+    {
+      id: "CVE-2023-1234",
+      title: "SQL Injection in Login Form",
+      severity: "high",
+      target: "192.168.1.100",
+      type: "sql-injection",
+      description: "Potential SQL injection vulnerability detected in authentication mechanism"
+    },
+    {
+      id: "CVE-2023-5678",
+      title: "Cross-Site Scripting (XSS)",
+      severity: "medium",
+      target: "web-server.local",
+      type: "xss-reflected",
+      description: "Reflected XSS vulnerability in search parameter"
+    },
+    {
+      id: "CVE-2023-9012",
+      title: "Weak SSL/TLS Configuration",
+      severity: "low",
+      target: "192.168.1.101",
+      type: "ssl-test",
+      description: "Server accepts weak cipher suites"
+    },
+    {
+      id: "CVE-2023-3456",
+      title: "Directory Traversal",
+      severity: "high",
+      target: "file-server.local",
+      type: "directory-traversal",
+      description: "Possible directory traversal vulnerability allowing file access"
+    }
+  ];
 
   const payloadTemplates = {
     "sql-injection": {
@@ -36,6 +74,11 @@ export const PayloadGenerator = () => {
       template: "; cat /etc/passwd #",
       description: "Unix command injection payload"
     },
+    "directory-traversal": {
+      name: "Directory Traversal",
+      template: "../../../etc/passwd",
+      description: "Path traversal payload to access sensitive files"
+    },
     "ldap-injection": {
       name: "LDAP Injection",
       template: "*)(uid=*))(|(uid=*",
@@ -49,6 +92,21 @@ export const PayloadGenerator = () => {
 ]>
 <root>&test;</root>`,
       description: "XXE payload to read local files"
+    },
+    "ssl-test": {
+      name: "SSL/TLS Test",
+      template: "openssl s_client -connect TARGET:443 -cipher 'DES-CBC3-SHA'",
+      description: "Command to test weak SSL/TLS ciphers"
+    }
+  };
+
+  const handleVulnerabilitySelect = (vulnId: string) => {
+    const vulnerability = vulnerabilities.find(v => v.id === vulnId);
+    if (vulnerability) {
+      setSelectedVulnerability(vulnId);
+      setPayloadType(vulnerability.type);
+      setTarget(vulnerability.target);
+      setParameters("");
     }
   };
 
@@ -56,7 +114,7 @@ export const PayloadGenerator = () => {
     if (!payloadType) {
       toast({
         title: "Error",
-        description: "Please select a payload type",
+        description: "Please select a payload type or vulnerability",
         variant: "destructive",
       });
       return;
@@ -74,7 +132,7 @@ export const PayloadGenerator = () => {
     }
 
     setGeneratedPayload(payload);
-    console.log("Generated payload:", payload);
+    console.log("Generated payload for vulnerability:", selectedVulnerability, payload);
 
     toast({
       title: "Payload Generated",
@@ -90,12 +148,66 @@ export const PayloadGenerator = () => {
     });
   };
 
+  const getSeverityIcon = (severity: string) => {
+    switch (severity) {
+      case "high": return <AlertTriangle size={16} className="text-red-400" />;
+      case "medium": return <Bug size={16} className="text-orange-400" />;
+      case "low": return <Shield size={16} className="text-yellow-400" />;
+      default: return <Bug size={16} className="text-gray-400" />;
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "high": return "bg-red-600";
+      case "medium": return "bg-orange-600";
+      case "low": return "bg-yellow-600";
+      default: return "bg-gray-600";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white">Payload Generator</h1>
-        <p className="text-gray-400 mt-1">Generate custom payloads for penetration testing</p>
+        <p className="text-gray-400 mt-1">Generate targeted payloads for identified vulnerabilities</p>
       </div>
+
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Bug size={20} />
+            Target Vulnerabilities
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {vulnerabilities.map((vuln) => (
+              <div
+                key={vuln.id}
+                className={`p-3 rounded-lg cursor-pointer transition-all border-2 ${
+                  selectedVulnerability === vuln.id
+                    ? "bg-green-900/30 border-green-600"
+                    : "bg-gray-700/50 border-gray-600 hover:border-gray-500"
+                }`}
+                onClick={() => handleVulnerabilitySelect(vuln.id)}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {getSeverityIcon(vuln.severity)}
+                    <h3 className="text-white font-medium text-sm">{vuln.title}</h3>
+                  </div>
+                  <Badge className={getSeverityColor(vuln.severity)}>
+                    {vuln.severity.toUpperCase()}
+                  </Badge>
+                </div>
+                <p className="text-gray-400 text-xs mb-1">{vuln.target}</p>
+                <p className="text-gray-300 text-xs">{vuln.description}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-gray-800 border-gray-700">
@@ -110,7 +222,7 @@ export const PayloadGenerator = () => {
               <label className="block text-sm font-medium text-gray-300 mb-2">Payload Type</label>
               <Select value={payloadType} onValueChange={setPayloadType}>
                 <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                  <SelectValue placeholder="Select payload type" />
+                  <SelectValue placeholder="Select payload type or choose vulnerability above" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
                   {Object.entries(payloadTemplates).map(([key, template]) => (
@@ -123,7 +235,7 @@ export const PayloadGenerator = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Target (Optional)</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Target</label>
               <Input
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
@@ -146,7 +258,7 @@ export const PayloadGenerator = () => {
               onClick={handleGeneratePayload}
               className="w-full bg-green-600 hover:bg-green-700"
             >
-              Generate Payload
+              Generate Targeted Payload
             </Button>
 
             {payloadType && (
@@ -182,7 +294,7 @@ export const PayloadGenerator = () => {
           <CardContent>
             <Textarea
               value={generatedPayload}
-              placeholder="Generated payload will appear here..."
+              placeholder="Select a vulnerability above to generate a targeted payload..."
               className="bg-gray-700 border-gray-600 text-green-400 font-mono text-sm min-h-[200px]"
               readOnly
             />
@@ -197,29 +309,6 @@ export const PayloadGenerator = () => {
           </CardContent>
         </Card>
       </div>
-
-      <Card className="bg-gray-800 border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-white">Payload Library</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(payloadTemplates).map(([key, template]) => (
-              <div
-                key={key}
-                className="p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-600/50 transition-colors"
-                onClick={() => setPayloadType(key)}
-              >
-                <h3 className="text-white font-medium mb-1">{template.name}</h3>
-                <p className="text-gray-400 text-xs mb-2">{template.description}</p>
-                <code className="text-green-400 text-xs bg-gray-800 p-1 rounded">
-                  {template.template.substring(0, 50)}...
-                </code>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
