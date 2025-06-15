@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Shield, Bug, Search, Terminal } from "lucide-react";
 
-export const Dashboard = () => {
+interface DashboardProps {
+  setActiveSection: (section: string) => void;
+}
+
+export const Dashboard = ({ setActiveSection }: DashboardProps) => {
   const [scanProgress, setScanProgress] = useState(0);
 
   useEffect(() => {
@@ -16,10 +20,10 @@ export const Dashboard = () => {
   }, []);
 
   const stats = [
-    { title: "Active Scans", value: "3", icon: Search, color: "text-blue-400" },
-    { title: "Vulnerabilities Found", value: "12", icon: Bug, color: "text-red-400" },
-    { title: "Targets Monitored", value: "8", icon: Shield, color: "text-green-400" },
-    { title: "Reports Generated", value: "24", icon: Terminal, color: "text-orange-400" },
+    { title: "Active Scans", value: "3", icon: Search, color: "text-blue-400", section: "network-scanner" },
+    { title: "Vulnerabilities Found", value: "12", icon: Bug, color: "text-red-400", section: "vulnerability-assessment" },
+    { title: "Targets Monitored", value: "8", icon: Shield, color: "text-green-400", section: "target-manager" },
+    { title: "Reports Generated", value: "24", icon: Terminal, color: "text-orange-400", section: "reports" },
   ];
 
   const recentActivity = [
@@ -46,7 +50,11 @@ export const Dashboard = () => {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} className="bg-gray-800 border-gray-700 hover:border-green-500/50 transition-colors">
+            <Card
+              key={index}
+              className="bg-gray-800 border-gray-700 hover:border-green-500/50 transition-colors cursor-pointer"
+              onClick={() => setActiveSection(stat.section)}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">{stat.title}</CardTitle>
                 <Icon className={`h-4 w-4 ${stat.color}`} />

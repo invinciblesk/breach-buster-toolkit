@@ -16,7 +16,7 @@ const Index = () => {
   const renderActiveSection = () => {
     switch (activeSection) {
       case "dashboard":
-        return <Dashboard />;
+        return <Dashboard setActiveSection={setActiveSection} />;
       case "network-scanner":
         return <NetworkScanner />;
       case "wireless-scanner":
@@ -30,7 +30,7 @@ const Index = () => {
       case "target-manager":
         return <TargetManager />;
       default:
-        return <Dashboard />;
+        return <Dashboard setActiveSection={setActiveSection} />;
     }
   };
 
