@@ -169,21 +169,30 @@ export const Reports = () => {
     });
     console.log("Generating new report");
 
+    // Create the new report with in-progress status first
+    const newReport = {
+      id: reports.length + 1,
+      name: `Security Assessment Report ${new Date().toLocaleDateString()}`,
+      type: "Comprehensive Scan",
+      date: new Date().toISOString().split('T')[0],
+      status: "in-progress" as const,
+      findings: Math.floor(Math.random() * 30) + 10,
+      criticalIssues: Math.floor(Math.random() * 8) + 1,
+      size: `${(Math.random() * 3 + 1).toFixed(1)} MB`,
+      reviewed: false
+    };
+    
+    // Add the report immediately with in-progress status
+    setReports(prev => [newReport, ...prev]);
+
     // Simulate report generation
     setTimeout(() => {
-      const newReport = {
-        id: reports.length + 1,
-        name: `Security Assessment Report ${new Date().toLocaleDateString()}`,
-        type: "Comprehensive Scan",
-        date: new Date().toISOString().split('T')[0],
-        status: "completed" as const,
-        findings: Math.floor(Math.random() * 30) + 10,
-        criticalIssues: Math.floor(Math.random() * 8) + 1,
-        size: `${(Math.random() * 3 + 1).toFixed(1)} MB`,
-        reviewed: false
-      };
-      
-      setReports(prev => [newReport, ...prev]);
+      // Update the report to completed status
+      setReports(prev => prev.map(report => 
+        report.id === newReport.id 
+          ? { ...report, status: "completed" as const }
+          : report
+      ));
       setIsGenerating(false);
       
       toast({
