@@ -1,5 +1,5 @@
 
-import { Shield, Search, Bug, Code, Database, Lock, Wifi } from "lucide-react";
+import { Shield, Search, Bug, Code, Database, Lock, Wifi, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +12,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 
 interface AppSidebarProps {
@@ -27,6 +28,7 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
     { id: "vulnerability-assessment", label: "Vulnerability Assessment", icon: Bug },
     { id: "payload-generator", label: "Payload Generator", icon: Code },
     { id: "target-manager", label: "Target Manager", icon: Database },
+    { id: "security-integrations", label: "Security Integrations", icon: Settings },
     { id: "reports", label: "Reports", icon: Lock },
   ];
 
@@ -44,7 +46,7 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
       
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-gray-400">Tools</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-gray-400">Security Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
@@ -73,6 +75,9 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
       </SidebarContent>
       
       <SidebarFooter className="p-4 border-t border-gray-700">
+        <div className="mb-3">
+          <UserMenu />
+        </div>
         <div className="bg-gray-700 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
