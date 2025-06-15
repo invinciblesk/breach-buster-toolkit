@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Download, FileText, Lock, Eye, ShieldCheck } from "lucide-react";
+import { Calendar, Download, FileText, Lock, Eye, ShieldCheck, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -12,6 +12,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const initialReports = [
   {
@@ -67,6 +78,10 @@ export const Reports = () => {
   const [reports, setReports] = useState<Report[]>(initialReports);
   const [reportToPreview, setReportToPreview] = useState<Report | null>(null);
   const { toast } = useToast();
+  const [selectedReports, setSelectedReports] = useState<Set<number>>(new Set());
+  const [isConfirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<'single' | 'selected' | 'all' | null>(null);
+  const [singleReportToDelete, setSingleReportToDelete] = useState<Report | null>(null);
 
   const handleGenerateReport = () => {
     if (!reportType) {
@@ -132,6 +147,70 @@ export const Reports = () => {
     });
   };
 
+  const handleToggleSelect = (reportId: number) => {
+    setSelectedReports(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(reportId)) {
+            newSet.delete(reportId);
+        } else {
+            newSet.add(reportId);
+        }
+        return newSet;
+    });
+  };
+
+  const handleToggleSelectAll = (checked: boolean) => {
+    if (checked) {
+        setSelectedReports(new Set(reports.map(r => r.id)));
+    } else {
+        setSelectedReports(new Set());
+    }
+  };
+
+  const openDeleteDialog = (target: 'single' | 'selected' | 'all', report?: Report) => {
+    setDeleteTarget(target);
+    if (report) {
+        setSingleReportToDelete(report);
+    }
+    setConfirmDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    let deletedCount = 0;
+    let toastTitle = "";
+    let toastDescription = "";
+
+    if (deleteTarget === 'single' && singleReportToDelete) {
+        setReports(reports.filter((r) => r.id !== singleReportToDelete.id));
+        deletedCount = 1;
+        toastTitle = "Report Deleted";
+        toastDescription = `${singleReportToDelete.name} has been deleted.`;
+    } else if (deleteTarget === 'selected') {
+        deletedCount = selectedReports.size;
+        setReports(reports.filter(r => !selectedReports.has(r.id)));
+        setSelectedReports(new Set());
+        toastTitle = "Reports Deleted";
+        toastDescription = `${deletedCount} reports have been deleted.`;
+    } else if (deleteTarget === 'all') {
+        deletedCount = reports.length;
+        setReports([]);
+        setSelectedReports(new Set());
+        toastTitle = "Report History Cleared";
+        toastDescription = "All reports have been deleted.";
+    }
+
+    if(deletedCount > 0){
+        toast({
+            title: toastTitle,
+            description: toastDescription,
+        });
+    }
+
+    setConfirmDeleteDialogOpen(false);
+    setDeleteTarget(null);
+    setSingleReportToDelete(null);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed": return "bg-green-600";
@@ -160,6 +239,9 @@ export const Reports = () => {
   };
 
   const mockVulnerabilityTypes = ["SQL Injection", "Cross-Site Scripting", "Directory Traversal", "Insecure Deserialization", "Command Injection", "Weak Authentication"];
+
+  const allSelected = selectedReports.size === reports.length && reports.length > 0;
+  const someSelected = selectedReports.size > 0 && !allSelected;
 
   return (
     <div className="space-y-6">
@@ -206,67 +288,116 @@ export const Reports = () => {
 
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-white">Report History</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Checkbox
+                id="select-all"
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={(checked) => handleToggleSelectAll(!!checked)}
+                aria-label="Select all reports"
+                disabled={reports.length === 0}
+              />
+              <CardTitle className="text-white">Report History</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedReports.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openDeleteDialog('selected')}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedReports.size})
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-white border-gray-500 hover:bg-gray-600 hover:text-white"
+                onClick={() => openDeleteDialog('all')}
+                disabled={reports.length === 0}
+              >
+                Clear History
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {reports.map((report) => (
-              <div key={report.id} className="p-4 bg-gray-700/50 rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <Lock size={18} className="text-gray-400" />
-                    <div>
-                      <h3 className="text-white font-medium">{report.name}</h3>
-                      <p className="text-gray-400 text-sm">{report.type}</p>
+              <div key={report.id} className="flex items-start gap-4 p-4 bg-gray-700/50 rounded-lg">
+                <Checkbox
+                  id={`select-report-${report.id}`}
+                  checked={selectedReports.has(report.id)}
+                  onCheckedChange={() => handleToggleSelect(report.id)}
+                  aria-labelledby={`report-name-${report.id}`}
+                  className="mt-1"
+                />
+                <div className="flex-grow">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Lock size={18} className="text-gray-400" />
+                      <div>
+                        <h3 id={`report-name-${report.id}`} className="text-white font-medium">{report.name}</h3>
+                        <p className="text-gray-400 text-sm">{report.type}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={getStatusColor(report.status)}>
+                        {report.status}
+                      </Badge>
+                      {report.status === "completed" && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleDownloadReport(report.name)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Download size={14} className="mr-1" />
+                          Download
+                        </Button>
+                      )}
+                      {report.status === "draft" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePreviewReport(report)}
+                            className="text-white border-gray-500 hover:bg-gray-600 hover:text-white"
+                          >
+                            <Eye size={14} className="mr-1" />
+                            Preview
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleReviewReport(report.id)}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                          >
+                            Review
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={() => openDeleteDialog('single', report)}
+                        className="h-9 w-9"
+                      >
+                        <Trash2 size={14} />
+                        <span className="sr-only">Delete report</span>
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={getStatusColor(report.status)}>
-                      {report.status}
-                    </Badge>
-                    {report.status === "completed" && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleDownloadReport(report.name)}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        <Download size={14} className="mr-1" />
-                        Download
-                      </Button>
-                    )}
-                    {report.status === "draft" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handlePreviewReport(report)}
-                          className="text-white border-gray-500 hover:bg-gray-600 hover:text-white"
-                        >
-                          <Eye size={14} className="mr-1" />
-                          Preview
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleReviewReport(report.id)}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-black"
-                        >
-                          Review
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={14} className="text-gray-400" />
-                    <span className="text-gray-300">{report.date}</span>
-                  </div>
-                  <div className="text-gray-300">
-                    <span className="text-red-400 font-medium">{report.vulnerabilities}</span> vulnerabilities found
-                  </div>
-                  <div className="text-gray-300">
-                    <span className="text-blue-400 font-medium">{report.targets}</span> targets scanned
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} className="text-gray-400" />
+                      <span className="text-gray-300">{report.date}</span>
+                    </div>
+                    <div className="text-gray-300">
+                      <span className="text-red-400 font-medium">{report.vulnerabilities}</span> vulnerabilities found
+                    </div>
+                    <div className="text-gray-300">
+                      <span className="text-blue-400 font-medium">{report.targets}</span> targets scanned
+                    </div>
                   </div>
                 </div>
               </div>
@@ -386,6 +517,25 @@ export const Reports = () => {
           </DialogContent>
         </Dialog>
       )}
+      
+      <AlertDialog open={isConfirmDeleteDialogOpen} onOpenChange={setConfirmDeleteDialogOpen}>
+        <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription className="text-gray-400">
+                    {deleteTarget === 'single' && 'This action cannot be undone. This will permanently delete the report.'}
+                    {deleteTarget === 'selected' && `This action cannot be undone. This will permanently delete the ${selectedReports.size} selected reports.`}
+                    {deleteTarget === 'all' && 'This action cannot be undone. This will permanently delete all reports from history.'}
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 border-gray-600 text-white">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+                    Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
