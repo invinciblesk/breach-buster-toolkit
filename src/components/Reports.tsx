@@ -482,7 +482,7 @@ export const Reports = () => {
                       <Badge className={getStatusColor(report.status)}>
                         {report.status}
                       </Badge>
-                      {report.reviewed && (
+                      {report.status === 'completed' && report.reviewed && (
                         <Badge className="bg-green-600">
                           Reviewed
                         </Badge>
@@ -518,7 +518,7 @@ export const Reports = () => {
                       <Download size={14} className="mr-1" />
                       Download
                     </Button>
-                    {!report.reviewed && report.status === 'completed' && (
+                    {report.status === 'completed' && !report.reviewed && (
                       <Button 
                         size="sm" 
                         variant="outline" 
