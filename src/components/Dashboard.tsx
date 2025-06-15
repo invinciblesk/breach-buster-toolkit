@@ -189,20 +189,20 @@ export const Dashboard = ({ setActiveSection }: DashboardProps) => {
           <CardTitle className="text-white">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
                 <Button
                   key={index}
                   onClick={action.action}
-                  className={`${action.color} p-6 h-auto flex flex-col items-center gap-3 text-center`}
+                  className={`${action.color} p-4 h-auto flex flex-col items-center gap-3 text-center min-h-[120px] group transition-all duration-200`}
                   variant="default"
                 >
-                  <Icon size={32} />
-                  <div>
-                    <div className="font-semibold">{action.title}</div>
-                    <div className="text-xs opacity-90 mt-1">{action.description}</div>
+                  <Icon size={28} className="flex-shrink-0" />
+                  <div className="space-y-1">
+                    <div className="font-semibold text-sm leading-tight">{action.title}</div>
+                    <div className="text-xs opacity-90 leading-tight line-clamp-2">{action.description}</div>
                   </div>
                 </Button>
               );

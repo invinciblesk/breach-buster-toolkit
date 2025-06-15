@@ -11,7 +11,9 @@ import {
   AlertTriangle, 
   CheckCircle,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  Trash2,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -31,7 +33,7 @@ import {
 } from 'recharts';
 
 export const Reports = () => {
-  const [reports] = useState([
+  const [reports, setReports] = useState([
     {
       id: 1,
       name: "Network Security Assessment",
@@ -63,6 +65,7 @@ export const Reports = () => {
       size: "1.2 MB"
     }
   ]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const vulnerabilityData = [
     { name: 'Critical', value: 15, color: '#ef4444' },
@@ -99,11 +102,52 @@ export const Reports = () => {
   };
 
   const handleGenerate = () => {
+    setIsGenerating(true);
     toast({
       title: "Generating Report",
       description: "New security assessment report is being generated...",
     });
     console.log("Generating new report");
+
+    // Simulate report generation
+    setTimeout(() => {
+      const newReport = {
+        id: reports.length + 1,
+        name: `Security Assessment Report ${new Date().toLocaleDateString()}`,
+        type: "Comprehensive Scan",
+        date: new Date().toISOString().split('T')[0],
+        status: "completed",
+        findings: Math.floor(Math.random() * 30) + 10,
+        criticalIssues: Math.floor(Math.random() * 8) + 1,
+        size: `${(Math.random() * 3 + 1).toFixed(1)} MB`
+      };
+      
+      setReports(prev => [newReport, ...prev]);
+      setIsGenerating(false);
+      
+      toast({
+        title: "Report Generated",
+        description: `${newReport.name} has been generated successfully.`,
+      });
+    }, 3000);
+  };
+
+  const handleDeleteReport = (reportId: number, reportName: string) => {
+    setReports(prev => prev.filter(report => report.id !== reportId));
+    toast({
+      title: "Report Deleted",
+      description: `${reportName} has been deleted.`,
+    });
+    console.log(`Deleting report with ID: ${reportId}`);
+  };
+
+  const handleClearHistory = () => {
+    setReports([]);
+    toast({
+      title: "History Cleared",
+      description: "All reports have been cleared from history.",
+    });
+    console.log("Clearing all reports history");
   };
 
   const getStatusColor = (status: string) => {
@@ -262,16 +306,50 @@ export const Reports = () => {
         <CardHeader>
           <CardTitle className="text-white flex items-center justify-between">
             <span>Generate New Report</span>
-            <Button onClick={handleGenerate} className="bg-green-600 hover:bg-green-700">
-              <FileText size={16} className="mr-2" />
-              Generate Report
-            </Button>
+            <div className="flex gap-2">
+              {reports.length > 0 && (
+                <Button 
+                  onClick={handleClearHistory} 
+                  variant="outline"
+                  className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Clear History
+                </Button>
+              )}
+              <Button 
+                onClick={handleGenerate} 
+                disabled={isGenerating}
+                className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <>
+                    <RefreshCw size={16} className="mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText size={16} className="mr-2" />
+                    Generate Report
+                  </>
+                )}
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-gray-400">
             Create a comprehensive security assessment report based on recent scans and findings.
           </p>
+          {isGenerating && (
+            <div className="mt-4">
+              <div className="flex justify-between text-sm text-gray-300 mb-2">
+                <span>Generating report...</span>
+                <span>Please wait</span>
+              </div>
+              <Progress value={33} className="w-full" />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -281,40 +359,57 @@ export const Reports = () => {
           <CardTitle className="text-white">Recent Reports</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {reports.map((report) => (
-              <div key={report.id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <FileText size={18} className="text-blue-400" />
-                    <h3 className="text-white font-medium">{report.name}</h3>
-                    <Badge className={getStatusColor(report.status)}>
-                      {report.status}
-                    </Badge>
+          {reports.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <FileText size={48} className="mx-auto mb-4 opacity-50" />
+              <p>No reports generated yet. Click "Generate Report" to create your first report.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reports.map((report) => (
+                <div key={report.id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <FileText size={18} className="text-blue-400" />
+                      <h3 className="text-white font-medium">{report.name}</h3>
+                      <Badge className={getStatusColor(report.status)}>
+                        {report.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-6 text-sm text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <Calendar size={14} />
+                        {report.date}
+                      </span>
+                      <span>{report.type}</span>
+                      <span>{report.findings} findings</span>
+                      <span className="text-red-400">{report.criticalIssues} critical</span>
+                      <span>{report.size}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-6 text-sm text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Calendar size={14} />
-                      {report.date}
-                    </span>
-                    <span>{report.type}</span>
-                    <span>{report.findings} findings</span>
-                    <span className="text-red-400">{report.criticalIssues} critical</span>
-                    <span>{report.size}</span>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleDownload(report.name)}
+                      className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                    >
+                      <Download size={14} className="mr-1" />
+                      Download
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleDeleteReport(report.id, report.name)}
+                      className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
                   </div>
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => handleDownload(report.name)}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-600"
-                >
-                  <Download size={14} className="mr-1" />
-                  Download
-                </Button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
