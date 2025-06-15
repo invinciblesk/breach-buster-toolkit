@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Play, Square, Shield, Bug, FileText, AlertCircle } from "lucide-react";
+import { Search, Play, Square, Shield, Bug, FileText, AlertCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,6 +20,7 @@ export const NetworkScanner = () => {
   const [vulnerabilities, setVulnerabilities] = useState([]);
   const [piiFindings, setPiiFindings] = useState([]);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
 
   const validateTarget = (target: string): boolean => {
@@ -30,7 +31,35 @@ export const NetworkScanner = () => {
     return ipRegex.test(target) || domainRegex.test(target) || target === 'localhost';
   };
 
+  const checkAuth = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Auth check error:', error);
+        setIsAuthenticated(false);
+        setError("Authentication error. Please sign in again.");
+        return false;
+      }
+      
+      if (!session) {
+        setIsAuthenticated(false);
+        setError("Please sign in to perform security scans.");
+        return false;
+      }
+      
+      setIsAuthenticated(true);
+      setError(null);
+      return true;
+    } catch (error: any) {
+      console.error('Auth check failed:', error);
+      setIsAuthenticated(false);
+      setError("Authentication check failed. Please refresh the page.");
+      return false;
+    }
+  };
+
   const handleStartScan = async () => {
+    console.log('Starting scan process...');
     setError(null);
     
     if (!target.trim()) {
@@ -43,16 +72,27 @@ export const NetworkScanner = () => {
       return;
     }
 
+    // Check authentication before starting scan
+    const authOk = await checkAuth();
+    if (!authOk) {
+      return;
+    }
+
     setIsScanning(true);
     setScanProgress(0);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      console.log('Getting current session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Session error:', sessionError);
         setError("Authentication required. Please sign in to perform scans.");
         setIsScanning(false);
         return;
       }
+
+      console.log('Session found, user ID:', session.user.id);
 
       // Simulate scan progress
       const progressInterval = setInterval(() => {
@@ -65,7 +105,7 @@ export const NetworkScanner = () => {
         });
       }, 500);
 
-      console.log(`Starting ${scanType} on ${target}`);
+      console.log(`Starting ${scanType} on ${target} with auth token`);
 
       const { data, error } = await supabase.functions.invoke('nmap-scanner', {
         body: { 
@@ -90,7 +130,7 @@ export const NetworkScanner = () => {
           variant: "destructive",
         });
       } else {
-        console.log('Scan completed:', data);
+        console.log('Scan completed successfully:', data);
         setError(null);
         toast({
           title: "Scan Complete",
@@ -117,6 +157,13 @@ export const NetworkScanner = () => {
   const fetchScanData = async () => {
     try {
       setError(null);
+      console.log('Fetching scan data...');
+      
+      // Check auth first
+      const authOk = await checkAuth();
+      if (!authOk) {
+        return;
+      }
       
       // Fetch recent scans
       const { data: scans, error: scansError } = await supabase
@@ -130,7 +177,11 @@ export const NetworkScanner = () => {
 
       if (scansError) {
         console.error('Error fetching scans:', scansError);
+        if (scansError.code === 'PGRST301') {
+          setError('No scan campaigns found. Start a scan to see results here.');
+        }
       } else if (scans) {
+        console.log('Fetched scans:', scans.length);
         setScanResults(scans);
       }
 
@@ -150,6 +201,7 @@ export const NetworkScanner = () => {
       if (vulnsError) {
         console.error('Error fetching vulnerabilities:', vulnsError);
       } else if (vulns) {
+        console.log('Fetched vulnerabilities:', vulns.length);
         setVulnerabilities(vulns);
       }
 
@@ -169,6 +221,7 @@ export const NetworkScanner = () => {
       if (piiError) {
         console.error('Error fetching PII findings:', piiError);
       } else if (pii) {
+        console.log('Fetched PII findings:', pii.length);
         setPiiFindings(pii);
       }
     } catch (error: any) {
@@ -178,7 +231,11 @@ export const NetworkScanner = () => {
   };
 
   useEffect(() => {
-    fetchScanData();
+    checkAuth().then((authOk) => {
+      if (authOk) {
+        fetchScanData();
+      }
+    });
   }, []);
 
   const handleStopScan = () => {
@@ -188,6 +245,14 @@ export const NetworkScanner = () => {
     toast({
       title: "Scan Stopped",
       description: "Scan has been terminated",
+    });
+  };
+
+  const handleRefresh = async () => {
+    await fetchScanData();
+    toast({
+      title: "Data Refreshed",
+      description: "Scan history has been updated",
     });
   };
 
@@ -223,6 +288,15 @@ export const NetworkScanner = () => {
         </Alert>
       )}
 
+      {!isAuthenticated && (
+        <Alert className="bg-yellow-900/50 border-yellow-600">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-yellow-200">
+            Please sign in to access the security scanner functionality.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
@@ -239,13 +313,13 @@ export const NetworkScanner = () => {
                 onChange={(e) => setTarget(e.target.value)}
                 placeholder="192.168.1.0/24 or domain.com"
                 className="bg-gray-700 border-gray-600 text-white"
-                disabled={isScanning}
+                disabled={isScanning || !isAuthenticated}
               />
               <p className="text-xs text-gray-500 mt-1">Enter IP address, CIDR notation, or domain name</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Scan Type</label>
-              <Select value={scanType} onValueChange={setScanType} disabled={isScanning}>
+              <Select value={scanType} onValueChange={setScanType} disabled={isScanning || !isAuthenticated}>
                 <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -259,7 +333,7 @@ export const NetworkScanner = () => {
             <div className="flex items-end gap-2">
               <Button
                 onClick={handleStartScan}
-                disabled={isScanning || !target.trim()}
+                disabled={isScanning || !target.trim() || !isAuthenticated}
                 className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
               >
                 <Play size={16} className="mr-2" />
@@ -272,6 +346,14 @@ export const NetworkScanner = () => {
               >
                 <Square size={16} className="mr-2" />
                 Stop
+              </Button>
+              <Button
+                onClick={handleRefresh}
+                disabled={isScanning || !isAuthenticated}
+                variant="outline"
+                size="icon"
+              >
+                <RefreshCw size={16} />
               </Button>
             </div>
           </div>
