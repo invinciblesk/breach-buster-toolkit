@@ -136,6 +136,8 @@ export const WirelessScanner = () => {
   }, []);
 
   const handleStartScan = () => {
+    console.log(`Starting ${activeTab} wireless scan`);
+    
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
     setIsScanning(true);
     setScanProgress(0);
@@ -155,8 +157,10 @@ export const WirelessScanner = () => {
         const newItem = dataToScan[itemsAdded];
         if (activeTab === 'wifi') {
           setFoundWifiNetworks(prev => [...prev, newItem as WifiNetwork]);
+          console.log(`Found WiFi network: ${(newItem as WifiNetwork).ssid}`);
         } else {
           setFoundBluetoothDevices(prev => [...prev, newItem as BluetoothDevice]);
+          console.log(`Found Bluetooth device: ${(newItem as BluetoothDevice).name}`);
         }
         itemsAdded++;
         setScanProgress(Math.round((itemsAdded / totalItems) * 100));
@@ -166,15 +170,15 @@ export const WirelessScanner = () => {
         setScanProgress(100);
         toast({
           title: "Wireless Scan Complete",
-          description: `${activeTab === 'wifi' ? 'WiFi' : 'Bluetooth'} scan completed successfully`,
+          description: `${activeTab === 'wifi' ? 'WiFi' : 'Bluetooth'} scan completed successfully. Found ${totalItems} ${activeTab === 'wifi' ? 'networks' : 'devices'}.`,
         });
+        setTimeout(() => setScanProgress(0), 2000);
       }
     }, 800);
-
-    console.log(`Starting ${activeTab} scan`);
   };
 
   const handleStopScan = () => {
+    console.log('Stopping wireless scan');
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
     }
@@ -211,6 +215,7 @@ export const WirelessScanner = () => {
   };
 
   const handleDownloadClick = (platform: 'Android' | 'iOS') => {
+    console.log(`Download requested for ${platform}`);
     toast({
       title: 'Coming Soon!',
       description: `The ${platform} app is not yet available. This feature will enable live network scanning directly from your device.`,

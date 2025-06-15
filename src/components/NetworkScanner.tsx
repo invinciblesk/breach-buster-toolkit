@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Search, Play, Square, Shield, Bug, FileText, AlertCircle, RefreshCw } f
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
 
 export const NetworkScanner = () => {
   const [target, setTarget] = useState("192.168.1.0/24");
@@ -20,7 +20,7 @@ export const NetworkScanner = () => {
   const [vulnerabilities, setVulnerabilities] = useState([]);
   const [piiFindings, setPiiFindings] = useState([]);
   const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, session } = useAuth();
   const { toast } = useToast();
 
   const validateTarget = (target: string): boolean => {
@@ -29,33 +29,6 @@ export const NetworkScanner = () => {
     const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
     
     return ipRegex.test(target) || domainRegex.test(target) || target === 'localhost';
-  };
-
-  const checkAuth = async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Auth check error:', error);
-        setIsAuthenticated(false);
-        setError("Authentication error. Please sign in again.");
-        return false;
-      }
-      
-      if (!session) {
-        setIsAuthenticated(false);
-        setError("Please sign in to perform security scans.");
-        return false;
-      }
-      
-      setIsAuthenticated(true);
-      setError(null);
-      return true;
-    } catch (error: any) {
-      console.error('Auth check failed:', error);
-      setIsAuthenticated(false);
-      setError("Authentication check failed. Please refresh the page.");
-      return false;
-    }
   };
 
   const handleStartScan = async () => {
@@ -72,9 +45,8 @@ export const NetworkScanner = () => {
       return;
     }
 
-    // Check authentication before starting scan
-    const authOk = await checkAuth();
-    if (!authOk) {
+    if (!session) {
+      setError("Please sign in to perform security scans.");
       return;
     }
 
@@ -82,17 +54,7 @@ export const NetworkScanner = () => {
     setScanProgress(0);
     
     try {
-      console.log('Getting current session...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        console.error('Session error:', sessionError);
-        setError("Authentication required. Please sign in to perform scans.");
-        setIsScanning(false);
-        return;
-      }
-
-      console.log('Session found, user ID:', session.user.id);
+      console.log('Session available, user ID:', user?.id);
 
       // Simulate scan progress
       const progressInterval = setInterval(() => {
@@ -155,15 +117,14 @@ export const NetworkScanner = () => {
   };
 
   const fetchScanData = async () => {
+    if (!session) {
+      console.log('No session available for fetching data');
+      return;
+    }
+
     try {
       setError(null);
       console.log('Fetching scan data...');
-      
-      // Check auth first
-      const authOk = await checkAuth();
-      if (!authOk) {
-        return;
-      }
       
       // Fetch recent scans
       const { data: scans, error: scansError } = await supabase
@@ -178,7 +139,7 @@ export const NetworkScanner = () => {
       if (scansError) {
         console.error('Error fetching scans:', scansError);
         if (scansError.code === 'PGRST301') {
-          setError('No scan campaigns found. Start a scan to see results here.');
+          console.log('No scan campaigns found');
         }
       } else if (scans) {
         console.log('Fetched scans:', scans.length);
@@ -231,12 +192,10 @@ export const NetworkScanner = () => {
   };
 
   useEffect(() => {
-    checkAuth().then((authOk) => {
-      if (authOk) {
-        fetchScanData();
-      }
-    });
-  }, []);
+    if (session && user) {
+      fetchScanData();
+    }
+  }, [session, user]);
 
   const handleStopScan = () => {
     setIsScanning(false);
@@ -288,7 +247,7 @@ export const NetworkScanner = () => {
         </Alert>
       )}
 
-      {!isAuthenticated && (
+      {!session && (
         <Alert className="bg-yellow-900/50 border-yellow-600">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-yellow-200">
@@ -313,13 +272,13 @@ export const NetworkScanner = () => {
                 onChange={(e) => setTarget(e.target.value)}
                 placeholder="192.168.1.0/24 or domain.com"
                 className="bg-gray-700 border-gray-600 text-white"
-                disabled={isScanning || !isAuthenticated}
+                disabled={isScanning || !session}
               />
               <p className="text-xs text-gray-500 mt-1">Enter IP address, CIDR notation, or domain name</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Scan Type</label>
-              <Select value={scanType} onValueChange={setScanType} disabled={isScanning || !isAuthenticated}>
+              <Select value={scanType} onValueChange={setScanType} disabled={isScanning || !session}>
                 <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -333,7 +292,7 @@ export const NetworkScanner = () => {
             <div className="flex items-end gap-2">
               <Button
                 onClick={handleStartScan}
-                disabled={isScanning || !target.trim() || !isAuthenticated}
+                disabled={isScanning || !target.trim() || !session}
                 className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
               >
                 <Play size={16} className="mr-2" />
@@ -349,7 +308,7 @@ export const NetworkScanner = () => {
               </Button>
               <Button
                 onClick={handleRefresh}
-                disabled={isScanning || !isAuthenticated}
+                disabled={isScanning || !session}
                 variant="outline"
                 size="icon"
               >

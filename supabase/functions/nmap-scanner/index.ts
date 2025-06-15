@@ -13,12 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { auth: { persistSession: false } }
-    )
-
+    // Get auth header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       console.error('Missing authorization header')
@@ -28,6 +23,18 @@ serve(async (req) => {
       })
     }
 
+    // Create authenticated Supabase client
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: authHeader }
+        }
+      }
+    )
+
+    // Get user from token
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
@@ -54,11 +61,17 @@ serve(async (req) => {
 
     console.log(`Starting scan for user ${user.id} on target ${target} with type ${scanType}`)
 
-    // First create a campaign for this scan with explicit user_id
-    const { data: campaign, error: campaignError } = await supabase
+    // Create campaign with explicit user_id and using service role for initial creation
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    )
+
+    const { data: campaign, error: campaignError } = await serviceSupabase
       .from('scan_campaigns')
       .insert({
-        user_id: user.id, // Explicitly set the user_id
+        user_id: user.id,
         name: `Quick ${scanType.replace('_', ' ')} - ${target}`,
         description: `Automated scan campaign for ${target}`,
         target_scope: [target],
@@ -81,8 +94,8 @@ serve(async (req) => {
 
     console.log('Campaign created successfully:', campaign.id)
 
-    // Create scan record with campaign association
-    const { data: scan, error: scanError } = await supabase
+    // Create scan record with campaign association using service role
+    const { data: scan, error: scanError } = await serviceSupabase
       .from('scans')
       .insert({
         campaign_id: campaign.id,
@@ -98,7 +111,7 @@ serve(async (req) => {
     if (scanError) {
       console.error('Error creating scan record:', scanError)
       // Clean up campaign if scan creation fails
-      await supabase
+      await serviceSupabase
         .from('scan_campaigns')
         .update({ status: 'failed' })
         .eq('id', campaign.id)
@@ -147,8 +160,8 @@ serve(async (req) => {
       simulatedResults.sensitive_files = ['/var/log/auth.log', '/etc/passwd']
     }
 
-    // Update scan with results
-    const { error: updateError } = await supabase
+    // Update scan with results using service role
+    const { error: updateError } = await serviceSupabase
       .from('scans')
       .update({
         status: 'completed',
@@ -162,7 +175,7 @@ serve(async (req) => {
     }
 
     // Update campaign status
-    await supabase
+    await serviceSupabase
       .from('scan_campaigns')
       .update({ status: 'completed' })
       .eq('id', campaign.id)
@@ -199,7 +212,7 @@ serve(async (req) => {
     }
 
     if (vulnerabilities.length > 0) {
-      const { error: vulnError } = await supabase.from('vulnerabilities').insert(vulnerabilities)
+      const { error: vulnError } = await serviceSupabase.from('vulnerabilities').insert(vulnerabilities)
       if (vulnError) {
         console.error('Error inserting vulnerabilities:', vulnError)
       } else {
@@ -221,7 +234,7 @@ serve(async (req) => {
         }
       ]
 
-      const { error: piiError } = await supabase.from('pii_findings').insert(piiFindings)
+      const { error: piiError } = await serviceSupabase.from('pii_findings').insert(piiFindings)
       if (piiError) {
         console.error('Error inserting PII findings:', piiError)
       } else {
