@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wifi, Bluetooth, Search, Play, Square, Shield, AlertTriangle, Lock, Download } from "lucide-react";
+import { Wifi, Bluetooth, Search, Play, Square, Shield, AlertTriangle, Lock, Download, Server } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Table,
   TableBody,
@@ -14,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type WifiNetwork = {
   ssid: string;
@@ -122,7 +125,10 @@ export const WirelessScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [activeTab, setActiveTab] = useState("wifi");
+  const [useRealScanning, setUseRealScanning] = useState(true);
+  const [scanResults, setScanResults] = useState<any>(null);
   const { toast } = useToast();
+  const { session } = useAuth();
   const [foundWifiNetworks, setFoundWifiNetworks] = useState<WifiNetwork[]>([]);
   const [foundBluetoothDevices, setFoundBluetoothDevices] = useState<BluetoothDevice[]>([]);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -135,8 +141,102 @@ export const WirelessScanner = () => {
     };
   }, []);
 
-  const handleStartScan = () => {
-    console.log(`Starting ${activeTab} wireless scan`);
+  const handleRealScan = async () => {
+    if (!session) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to perform real wireless scanning",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log(`Starting real ${activeTab} scan`);
+    setIsScanning(true);
+    setScanProgress(0);
+    
+    if (activeTab === 'wifi') {
+      setFoundWifiNetworks([]);
+    } else {
+      setFoundBluetoothDevices([]);
+    }
+
+    try {
+      // Simulate progress during backend call
+      const progressInterval = setInterval(() => {
+        setScanProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 500);
+
+      const { data, error } = await supabase.functions.invoke('wireless-scanner', {
+        body: { 
+          scanType: activeTab === 'wifi' ? 'wifi' : 'bluetooth'
+        }
+      });
+
+      clearInterval(progressInterval);
+      setScanProgress(100);
+
+      if (error) {
+        console.error('Real scan error:', error);
+        toast({
+          title: "Scan Failed",
+          description: `Real scanning failed: ${error.message}. Falling back to demo mode.`,
+          variant: "destructive",
+        });
+        // Fallback to mock data
+        handleMockScan();
+        return;
+      }
+
+      console.log('Real scan results:', data);
+      setScanResults(data);
+
+      if (data.results) {
+        if (activeTab === 'wifi' && data.results.networks) {
+          setFoundWifiNetworks(data.results.networks);
+          toast({
+            title: "Real WiFi Scan Complete",
+            description: `Found ${data.results.networks.length} networks on ${data.platform}`,
+          });
+        } else if (activeTab === 'bluetooth' && data.results.devices) {
+          setFoundBluetoothDevices(data.results.devices);
+          toast({
+            title: "Real Bluetooth Scan Complete", 
+            description: `Found ${data.results.devices.length} devices on ${data.platform}`,
+          });
+        }
+
+        if (data.results.message) {
+          toast({
+            title: "Scan Information",
+            description: data.results.message,
+          });
+        }
+      }
+
+    } catch (error: any) {
+      console.error('Real scan network error:', error);
+      toast({
+        title: "Network Error",
+        description: "Failed to connect to scanning service. Using demo mode.",
+        variant: "destructive",
+      });
+      // Fallback to mock data
+      handleMockScan();
+    } finally {
+      setIsScanning(false);
+      setTimeout(() => setScanProgress(0), 2000);
+    }
+  };
+
+  const handleMockScan = () => {
+    console.log(`Starting mock ${activeTab} wireless scan`);
     
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
     setIsScanning(true);
@@ -169,12 +269,20 @@ export const WirelessScanner = () => {
         setIsScanning(false);
         setScanProgress(100);
         toast({
-          title: "Wireless Scan Complete",
-          description: `${activeTab === 'wifi' ? 'WiFi' : 'Bluetooth'} scan completed successfully. Found ${totalItems} ${activeTab === 'wifi' ? 'networks' : 'devices'}.`,
+          title: "Demo Scan Complete",
+          description: `Demo ${activeTab === 'wifi' ? 'WiFi' : 'Bluetooth'} scan completed. Found ${totalItems} ${activeTab === 'wifi' ? 'networks' : 'devices'}.`,
         });
         setTimeout(() => setScanProgress(0), 2000);
       }
     }, 800);
+  };
+
+  const handleStartScan = () => {
+    if (useRealScanning) {
+      handleRealScan();
+    } else {
+      handleMockScan();
+    }
   };
 
   const handleStopScan = () => {
@@ -226,8 +334,18 @@ export const WirelessScanner = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white">Wireless Scanner</h1>
-        <p className="text-gray-400 mt-1">Discover WiFi networks and Bluetooth devices</p>
+        <p className="text-gray-400 mt-1">Discover WiFi networks and Bluetooth devices with real scanning capabilities</p>
       </div>
+
+      {scanResults && scanResults.platform && (
+        <Alert className="bg-blue-900/50 border-blue-600">
+          <Server className="h-4 w-4" />
+          <AlertDescription className="text-blue-200">
+            Real scanning performed on {scanResults.platform} platform. 
+            {scanResults.results?.message && ` ${scanResults.results.message}`}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
@@ -237,6 +355,21 @@ export const WirelessScanner = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="realScanning"
+                checked={useRealScanning}
+                onChange={(e) => setUseRealScanning(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded"
+              />
+              <label htmlFor="realScanning" className="text-gray-300 text-sm">
+                Use Real Scanning (requires server deployment)
+              </label>
+            </div>
+          </div>
+
           <div className="flex items-center gap-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
               <TabsList className="bg-gray-700">
@@ -258,7 +391,7 @@ export const WirelessScanner = () => {
                 className="bg-green-600 hover:bg-green-700"
               >
                 <Play size={16} className="mr-2" />
-                Start Scan
+                {useRealScanning ? 'Real Scan' : 'Demo Scan'}
               </Button>
               <Button
                 onClick={handleStopScan}
@@ -274,7 +407,9 @@ export const WirelessScanner = () => {
           {isScanning && (
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-300">Scanning {activeTab === 'wifi' ? 'WiFi Networks' : 'Bluetooth Devices'}</span>
+                <span className="text-gray-300">
+                  {useRealScanning ? 'Real' : 'Demo'} Scanning {activeTab === 'wifi' ? 'WiFi Networks' : 'Bluetooth Devices'}
+                </span>
                 <span className="text-green-400">{scanProgress}%</span>
               </div>
               <Progress value={scanProgress} className="h-2 bg-gray-700" />
@@ -388,6 +523,41 @@ export const WirelessScanner = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Server size={20} />
+            Real Scanning Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4 text-gray-300">
+            <div>
+              <h4 className="font-semibold text-white mb-2">Platform Support:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li><strong>Linux:</strong> Uses iwlist (WiFi) and hcitool (Bluetooth)</li>
+                <li><strong>macOS:</strong> Uses airport utility (WiFi only)</li>
+                <li><strong>Windows:</strong> Uses netsh wlan (limited WiFi info)</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-2">Requirements:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Server deployment with appropriate system permissions</li>
+                <li>Required scanning tools installed (iwlist, hcitool, etc.)</li>
+                <li>Root/admin privileges may be needed for some operations</li>
+              </ul>
+            </div>
+            <Alert className="bg-yellow-900/50 border-yellow-600">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-yellow-200">
+                Real scanning requires deployment to a server environment. In serverless/browser environments, demo mode will be used automatically.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
