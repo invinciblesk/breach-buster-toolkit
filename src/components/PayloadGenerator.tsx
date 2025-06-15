@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Code, Copy, Bug, AlertTriangle, Shield, Send, Search, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { VulnSelectionCard } from "./payload-generator/VulnSelectionCard";
+import { PayloadConfigCard } from "./payload-generator/PayloadConfigCard";
+import { PayloadOutputCard } from "./payload-generator/PayloadOutputCard";
+import { payloadTemplates, advancedVulns } from "./payload-generator/payloadUtils";
 
 // Advanced/professional payloads with explanation and context
 const payloadTemplates = {
@@ -131,6 +134,7 @@ export const PayloadGenerator = () => {
   const [testingPayload, setTestingPayload] = useState(false);
   const { toast } = useToast();
 
+  // Move logic for vuln selection out
   const handleVulnerabilitySelect = (vulnId: string) => {
     const vulnerability = advancedVulns.find(v => v.id === vulnId);
     if (vulnerability) {
@@ -180,7 +184,7 @@ export const PayloadGenerator = () => {
     setTimeout(() => {
       setTestingPayload(false);
       if (payloadType === "sql-injection" && target.includes("192.168.1.100")) {
-        setExploitResult("Login bypassed! SQLi executed. DB dump: admin, hash:$2a$12$yW...8j; user, hash:$2a$...");
+        setExploitResult("Login bypassed! SQLi executed. DB dump: admin, hash:$2a$12$yW...8j; user, hash:$2a...");
       } else if (payloadType === "xss-reflected") {
         setExploitResult("Input reflected and script executed. XSS Success: alert/dialog triggered.");
       } else if(payloadType==="command-injection"){
@@ -223,155 +227,28 @@ export const PayloadGenerator = () => {
           <Badge className="bg-gradient-to-r from-blue-700 to-green-600 text-white shadow-md">Advanced Mode</Badge>
         </div>
       </div>
-      {/* Vuln selection */}
-      <Card className="bg-gray-800 border-gray-700 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Bug size={20} />
-            Target Vulnerabilities
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {advancedVulns.map((vuln) => (
-              <div
-                key={vuln.id}
-                className={`p-3 rounded-lg cursor-pointer transition-all border-2 ${
-                  selectedVulnerability === vuln.id
-                    ? "bg-green-900/30 border-green-600"
-                    : "bg-gray-700/50 border-gray-600 hover:border-gray-500"
-                }`}
-                onClick={() => handleVulnerabilitySelect(vuln.id)}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getSeverityIcon(vuln.severity)}
-                    <h3 className="text-white font-medium text-sm">{vuln.title}</h3>
-                  </div>
-                  <Badge className={getSeverityColor(vuln.severity)}>
-                    {vuln.severity.toUpperCase()}
-                  </Badge>
-                </div>
-                <p className="text-gray-400 text-xs mb-1">{vuln.target}</p>
-                <p className="text-gray-300 text-xs">{vuln.description}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      
+      <VulnSelectionCard 
+        selectedVulnerability={selectedVulnerability} 
+        onSelect={handleVulnerabilitySelect} 
+      />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Code size={20} />
-              Payload Configuration
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Payload Type</label>
-              <Select value={payloadType} onValueChange={setPayloadType}>
-                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                  <SelectValue placeholder="Select payload type or choose vulnerability above" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-700 border-gray-600 z-50">
-                  {Object.entries(payloadTemplates).map(([key, template]) => (
-                    <SelectItem key={key} value={key} className="text-white hover:bg-gray-600">
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Target</label>
-              <Input
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                placeholder="Target URL or parameter"
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Additional Parameters</label>
-              <Input
-                value={parameters}
-                onChange={(e) => setParameters(e.target.value)}
-                placeholder="Custom parameters"
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-            </div>
-            <Button
-              onClick={handleGeneratePayload}
-              className="w-full bg-gradient-to-r from-green-600 to-green-700"
-            >
-              Generate Targeted Payload
-            </Button>
-            {payloadType && (
-              <div className="p-3 bg-gray-700/50 rounded-lg mt-2">
-                <h4 className="text-sm font-bold text-white mb-1">
-                  {payloadTemplates[payloadType as keyof typeof payloadTemplates].name}
-                </h4>
-                <p className="text-xs text-gray-400">
-                  {payloadTemplates[payloadType as keyof typeof payloadTemplates].description}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="bg-gray-800 border-gray-700 relative">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center justify-between">
-              Generated Payload
-              {generatedPayload && (
-                <Button
-                  onClick={handleCopyPayload}
-                  size="sm"
-                  variant="outline"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                >
-                  <Copy size={16} className="mr-2" />
-                  Copy
-                </Button>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={generatedPayload}
-              placeholder="Select a vulnerability above to generate a targeted payload..."
-              className="bg-gray-700 border-gray-600 text-green-400 font-mono text-sm min-h-[150px]"
-              readOnly
-            />
-            <div className="flex items-center gap-2 mt-3">
-              <Button
-                disabled={!generatedPayload || testingPayload}
-                variant="default"
-                onClick={handleTestPayload}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-cyan-700 hover:to-indigo-700 flex items-center gap-1"
-              >
-                <Send size={16} />
-                {testingPayload ? "Testing..." : "Test Payload"}
-              </Button>
-              <span className="text-xs text-gray-400 flex items-center">
-                <Search size={10} className="mr-0.5" />
-                Simulated output
-              </span>
-            </div>
-            {exploitResult && (
-              <div className={`mt-3 p-3 ${exploitResult.includes("Success") || exploitResult.toLowerCase().includes("bypass") ? "bg-green-900/30 border-green-700 text-green-200" : "bg-yellow-900/30 border-yellow-700 text-yellow-100"} border rounded-lg shadow-inner font-mono text-xs`}>
-                {exploitResult}
-              </div>
-            )}
-            {generatedPayload && (
-              <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-600/50 rounded-lg">
-                <p className="text-yellow-400 text-xs">
-                  <strong>Warning:</strong> Use these payloads only on systems you own or have explicit permission to test. Unauthorized use may be illegal and unethical.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <PayloadConfigCard
+          payloadType={payloadType}
+          setPayloadType={setPayloadType}
+          target={target}
+          setTarget={setTarget}
+          parameters={parameters}
+          setParameters={setParameters}
+          onGenerate={handleGeneratePayload}
+        />
+        <PayloadOutputCard
+          generatedPayload={generatedPayload}
+          handleCopyPayload={handleCopyPayload}
+          handleTestPayload={handleTestPayload}
+          testingPayload={testingPayload}
+          exploitResult={exploitResult}
+        />
       </div>
     </div>
   );
