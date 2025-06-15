@@ -9,6 +9,7 @@ import { VulnerabilityAssessment } from "@/components/VulnerabilityAssessment";
 import { PayloadGenerator } from "@/components/PayloadGenerator";
 import { Reports } from "@/components/Reports";
 import { TargetManager } from "@/components/TargetManager";
+import { SecurityIntegrations } from "@/components/SecurityIntegrations";
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -29,6 +30,8 @@ const Index = () => {
         return <Reports />;
       case "target-manager":
         return <TargetManager />;
+      case "security-integrations":
+        return <SecurityIntegrations />;
       default:
         return <Dashboard setActiveSection={setActiveSection} />;
     }
