@@ -31,10 +31,37 @@ serve(async (req) => {
 
     const { target, scanType, parameters } = await req.json()
 
-    // Create scan record
+    console.log(`Starting scan for user ${user.id} on target ${target}`)
+
+    // First create a campaign for this scan
+    const { data: campaign, error: campaignError } = await supabase
+      .from('scan_campaigns')
+      .insert({
+        user_id: user.id,
+        name: `Quick ${scanType} - ${target}`,
+        description: `Automated scan campaign for ${target}`,
+        target_scope: [target],
+        scan_types: [scanType],
+        status: 'running'
+      })
+      .select()
+      .single()
+
+    if (campaignError) {
+      console.error('Error creating campaign:', campaignError)
+      return new Response(JSON.stringify({ error: 'Failed to create scan campaign' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    console.log('Campaign created:', campaign.id)
+
+    // Create scan record with campaign association
     const { data: scan, error: scanError } = await supabase
       .from('scans')
       .insert({
+        campaign_id: campaign.id,
         scan_type: scanType,
         target: target,
         parameters: parameters,
@@ -51,6 +78,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    console.log('Scan created:', scan.id)
 
     // Simulate Nmap scan execution
     console.log(`Starting Nmap scan on ${target} with type ${scanType}`)
@@ -83,6 +112,12 @@ serve(async (req) => {
       console.error('Error updating scan:', updateError)
     }
 
+    // Update campaign status
+    await supabase
+      .from('scan_campaigns')
+      .update({ status: 'completed' })
+      .eq('id', campaign.id)
+
     // Create vulnerability records based on scan results
     const vulnerabilities = []
     if (simulatedResults.ports.some(p => p.port === 22 && p.state === 'open')) {
@@ -100,11 +135,17 @@ serve(async (req) => {
     }
 
     if (vulnerabilities.length > 0) {
-      await supabase.from('vulnerabilities').insert(vulnerabilities)
+      const { error: vulnError } = await supabase.from('vulnerabilities').insert(vulnerabilities)
+      if (vulnError) {
+        console.error('Error inserting vulnerabilities:', vulnError)
+      }
     }
+
+    console.log('Scan completed successfully')
 
     return new Response(JSON.stringify({ 
       scan_id: scan.id,
+      campaign_id: campaign.id,
       status: 'completed',
       results: simulatedResults 
     }), {
