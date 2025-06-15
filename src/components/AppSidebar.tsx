@@ -1,5 +1,5 @@
 
-import { Shield, Search, Bug, Code, Database, Lock } from "lucide-react";
+import { Shield, Search, Bug, Code, Database, Lock, Wifi } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +23,7 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Shield },
     { id: "network-scanner", label: "Network Scanner", icon: Search },
+    { id: "wireless-scanner", label: "Wireless Scanner", icon: Wifi },
     { id: "vulnerability-assessment", label: "Vulnerability Assessment", icon: Bug },
     { id: "payload-generator", label: "Payload Generator", icon: Code },
     { id: "target-manager", label: "Target Manager", icon: Database },

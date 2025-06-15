@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { NetworkScanner } from "@/components/NetworkScanner";
+import { WirelessScanner } from "@/components/WirelessScanner";
 import { VulnerabilityAssessment } from "@/components/VulnerabilityAssessment";
 import { PayloadGenerator } from "@/components/PayloadGenerator";
 import { Reports } from "@/components/Reports";
@@ -18,6 +19,8 @@ const Index = () => {
         return <Dashboard />;
       case "network-scanner":
         return <NetworkScanner />;
+      case "wireless-scanner":
+        return <WirelessScanner />;
       case "vulnerability-assessment":
         return <VulnerabilityAssessment />;
       case "payload-generator":
