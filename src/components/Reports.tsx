@@ -1,8 +1,10 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   FileText, 
   Download, 
@@ -65,6 +67,7 @@ export const Reports = () => {
       size: "1.2 MB"
     }
   ]);
+  const [selectedReports, setSelectedReports] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const vulnerabilityData = [
@@ -93,6 +96,13 @@ export const Reports = () => {
 
   const { toast } = useToast();
 
+  // Calculate dynamic totals based on actual reports data
+  const totalReports = reports.length;
+  const activeScans = reports.filter(r => r.status === 'in-progress').length;
+  const totalCriticalIssues = reports.reduce((sum, report) => sum + report.criticalIssues, 0);
+  const completedReports = reports.filter(r => r.status === 'completed').length;
+  const resolutionRate = totalReports > 0 ? Math.round((completedReports / totalReports) * 100) : 0;
+
   const handleDownload = (reportName: string) => {
     toast({
       title: "Downloading Report",
@@ -116,7 +126,7 @@ export const Reports = () => {
         name: `Security Assessment Report ${new Date().toLocaleDateString()}`,
         type: "Comprehensive Scan",
         date: new Date().toISOString().split('T')[0],
-        status: "completed",
+        status: "completed" as const,
         findings: Math.floor(Math.random() * 30) + 10,
         criticalIssues: Math.floor(Math.random() * 8) + 1,
         size: `${(Math.random() * 3 + 1).toFixed(1)} MB`
@@ -133,21 +143,61 @@ export const Reports = () => {
   };
 
   const handleDeleteReport = (reportId: number, reportName: string) => {
+    // Simulate backend deletion
+    console.log(`Deleting report with ID: ${reportId} from backend`);
+    
     setReports(prev => prev.filter(report => report.id !== reportId));
+    setSelectedReports(prev => prev.filter(id => id !== reportId));
+    
     toast({
       title: "Report Deleted",
       description: `${reportName} has been deleted.`,
     });
-    console.log(`Deleting report with ID: ${reportId}`);
+  };
+
+  const handleMultiDelete = () => {
+    if (selectedReports.length === 0) return;
+
+    // Simulate backend deletion for selected reports
+    console.log(`Deleting reports with IDs: ${selectedReports.join(', ')} from backend`);
+    
+    const deletedCount = selectedReports.length;
+    setReports(prev => prev.filter(report => !selectedReports.includes(report.id)));
+    setSelectedReports([]);
+    
+    toast({
+      title: "Reports Deleted",
+      description: `${deletedCount} report(s) have been deleted.`,
+    });
   };
 
   const handleClearHistory = () => {
+    // Simulate backend deletion of all reports
+    console.log("Clearing all reports from backend");
+    
     setReports([]);
+    setSelectedReports([]);
+    
     toast({
       title: "History Cleared",
       description: "All reports have been cleared from history.",
     });
-    console.log("Clearing all reports history");
+  };
+
+  const handleSelectReport = (reportId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedReports(prev => [...prev, reportId]);
+    } else {
+      setSelectedReports(prev => prev.filter(id => id !== reportId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedReports(reports.map(r => r.id));
+    } else {
+      setSelectedReports([]);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -161,7 +211,7 @@ export const Reports = () => {
 
   return (
     <div className="space-y-6">
-      {/* Overview Cards */}
+      {/* Overview Cards - Now Dynamic */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -169,8 +219,8 @@ export const Reports = () => {
             <FileText className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">47</div>
-            <p className="text-xs text-gray-400">+12% from last month</p>
+            <div className="text-2xl font-bold text-white">{totalReports}</div>
+            <p className="text-xs text-gray-400">Generated reports</p>
           </CardContent>
         </Card>
 
@@ -180,8 +230,8 @@ export const Reports = () => {
             <TrendingUp className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">3</div>
-            <p className="text-xs text-gray-400">2 network, 1 web app</p>
+            <div className="text-2xl font-bold text-white">{activeScans}</div>
+            <p className="text-xs text-gray-400">Currently running</p>
           </CardContent>
         </Card>
 
@@ -191,19 +241,19 @@ export const Reports = () => {
             <AlertTriangle className="h-4 w-4 text-red-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">15</div>
-            <p className="text-xs text-gray-400">Require immediate attention</p>
+            <div className="text-2xl font-bold text-white">{totalCriticalIssues}</div>
+            <p className="text-xs text-gray-400">Across all reports</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-300">Resolution Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-300">Completion Rate</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">89%</div>
-            <p className="text-xs text-gray-400">+5% from last month</p>
+            <div className="text-2xl font-bold text-white">{resolutionRate}%</div>
+            <p className="text-xs text-gray-400">Reports completed</p>
           </CardContent>
         </Card>
       </div>
@@ -299,48 +349,36 @@ export const Reports = () => {
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
-      </Card>
+      </div>
 
       {/* Generate New Report */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-white flex items-center justify-between">
-            <span>Generate New Report</span>
-            <div className="flex gap-2">
-              {reports.length > 0 && (
-                <Button 
-                  onClick={handleClearHistory} 
-                  variant="outline"
-                  className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
-                >
-                  <Trash2 size={16} className="mr-2" />
-                  Clear History
-                </Button>
-              )}
-              <Button 
-                onClick={handleGenerate} 
-                disabled={isGenerating}
-                className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw size={16} className="mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText size={16} className="mr-2" />
-                    Generate Report
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardTitle>
+          <CardTitle className="text-white">Generate New Report</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-400">
-            Create a comprehensive security assessment report based on recent scans and findings.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-gray-400">
+              Create a comprehensive security assessment report based on recent scans and findings.
+            </p>
+            <Button 
+              onClick={handleGenerate} 
+              disabled={isGenerating}
+              className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw size={16} className="mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileText size={16} className="mr-2" />
+                  Generate Report
+                </>
+              )}
+            </Button>
+          </div>
           {isGenerating && (
             <div className="mt-4">
               <div className="flex justify-between text-sm text-gray-300 mb-2">
@@ -353,10 +391,34 @@ export const Reports = () => {
         </CardContent>
       </Card>
 
-      {/* Reports List */}
+      {/* Recent Reports */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-white">Recent Reports</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-white">Recent Reports</CardTitle>
+            <div className="flex gap-2">
+              {selectedReports.length > 0 && (
+                <Button 
+                  onClick={handleMultiDelete} 
+                  variant="outline"
+                  className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Delete Selected ({selectedReports.length})
+                </Button>
+              )}
+              {reports.length > 0 && (
+                <Button 
+                  onClick={handleClearHistory} 
+                  variant="outline"
+                  className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Clear History
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {reports.length === 0 ? (
@@ -366,8 +428,27 @@ export const Reports = () => {
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Select All Checkbox */}
+              {reports.length > 0 && (
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-700">
+                  <Checkbox
+                    checked={selectedReports.length === reports.length}
+                    onCheckedChange={handleSelectAll}
+                    className="border-gray-500"
+                  />
+                  <span className="text-sm text-gray-400">
+                    Select All ({reports.length} reports)
+                  </span>
+                </div>
+              )}
+              
               {reports.map((report) => (
-                <div key={report.id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
+                <div key={report.id} className="flex items-center gap-3 p-4 bg-gray-700 rounded-lg">
+                  <Checkbox
+                    checked={selectedReports.includes(report.id)}
+                    onCheckedChange={(checked) => handleSelectReport(report.id, checked)}
+                    className="border-gray-500"
+                  />
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <FileText size={18} className="text-blue-400" />
