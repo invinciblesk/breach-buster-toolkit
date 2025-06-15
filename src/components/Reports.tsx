@@ -7,48 +7,57 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Download, FileText, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const initialReports = [
+  {
+    id: 1,
+    name: "Q1 2024 Security Assessment",
+    type: "Comprehensive",
+    date: "2024-01-15",
+    status: "completed",
+    vulnerabilities: 12,
+    targets: 5
+  },
+  {
+    id: 2,
+    name: "Web Application Pentest",
+    type: "Web Security",
+    date: "2024-01-10",
+    status: "completed",
+    vulnerabilities: 8,
+    targets: 2
+  },
+  {
+    id: 3,
+    name: "Network Infrastructure Scan",
+    type: "Network Security",
+    date: "2024-01-08",
+    status: "completed",
+    vulnerabilities: 15,
+    targets: 10
+  },
+  {
+    id: 4,
+    name: "Monthly Security Review",
+    type: "Executive Summary",
+    date: "2024-01-05",
+    status: "draft",
+    vulnerabilities: 20,
+    targets: 8
+  }
+];
+
+const reportTypeOptions = [
+    { value: "comprehensive", label: "Comprehensive Security Assessment", typeName: "Comprehensive" },
+    { value: "web-security", label: "Web Application Security", typeName: "Web Security" },
+    { value: "network-security", label: "Network Security Assessment", typeName: "Network Security" },
+    { value: "executive-summary", label: "Executive Summary", typeName: "Executive Summary" },
+    { value: "compliance", label: "Compliance Report", typeName: "Compliance" }
+];
+
 export const Reports = () => {
   const [reportType, setReportType] = useState("");
+  const [reports, setReports] = useState(initialReports);
   const { toast } = useToast();
-
-  const reports = [
-    {
-      id: 1,
-      name: "Q1 2024 Security Assessment",
-      type: "Comprehensive",
-      date: "2024-01-15",
-      status: "completed",
-      vulnerabilities: 12,
-      targets: 5
-    },
-    {
-      id: 2,
-      name: "Web Application Pentest",
-      type: "Web Security",
-      date: "2024-01-10",
-      status: "completed",
-      vulnerabilities: 8,
-      targets: 2
-    },
-    {
-      id: 3,
-      name: "Network Infrastructure Scan",
-      type: "Network Security",
-      date: "2024-01-08",
-      status: "completed",
-      vulnerabilities: 15,
-      targets: 10
-    },
-    {
-      id: 4,
-      name: "Monthly Security Review",
-      type: "Executive Summary",
-      date: "2024-01-05",
-      status: "draft",
-      vulnerabilities: 20,
-      targets: 8
-    }
-  ];
 
   const handleGenerateReport = () => {
     if (!reportType) {
@@ -60,12 +69,34 @@ export const Reports = () => {
       return;
     }
 
+    const selectedReportTypeDetails = reportTypeOptions.find(rt => rt.value === reportType);
+
+    if (!selectedReportTypeDetails) {
+        toast({
+            title: "Error",
+            description: "Invalid report type selected",
+            variant: "destructive",
+        });
+        return;
+    }
+
+    const newReport = {
+      id: reports.length + 1,
+      name: `${selectedReportTypeDetails.typeName} Report - ${new Date().toLocaleDateString()}`,
+      type: selectedReportTypeDetails.typeName,
+      date: new Date().toISOString().split("T")[0],
+      status: "draft",
+      vulnerabilities: Math.floor(Math.random() * 25),
+      targets: Math.floor(Math.random() * 10) + 1,
+    };
+
+    setReports([newReport, ...reports]);
+    setReportType("");
+
     toast({
       title: "Report Generation Started",
-      description: `Generating ${reportType} report...`,
+      description: `Generating ${selectedReportTypeDetails.label}...`,
     });
-
-    console.log("Generating report of type:", reportType);
   };
 
   const handleDownloadReport = (reportName: string) => {
@@ -108,21 +139,11 @@ export const Reports = () => {
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="comprehensive" className="text-white hover:bg-gray-600">
-                    Comprehensive Security Assessment
-                  </SelectItem>
-                  <SelectItem value="web-security" className="text-white hover:bg-gray-600">
-                    Web Application Security
-                  </SelectItem>
-                  <SelectItem value="network-security" className="text-white hover:bg-gray-600">
-                    Network Security Assessment
-                  </SelectItem>
-                  <SelectItem value="executive-summary" className="text-white hover:bg-gray-600">
-                    Executive Summary
-                  </SelectItem>
-                  <SelectItem value="compliance" className="text-white hover:bg-gray-600">
-                    Compliance Report
-                  </SelectItem>
+                  {reportTypeOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value} className="text-white hover:bg-gray-600">
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
