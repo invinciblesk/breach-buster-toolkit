@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Download, FileText, Lock } from "lucide-react";
+import { Calendar, Download, FileText, Lock, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const initialReports = [
@@ -107,6 +107,26 @@ export const Reports = () => {
     console.log("Downloading report:", reportName);
   };
 
+  const handlePreviewReport = (reportName: string) => {
+    toast({
+      title: "Previewing Report",
+      description: `Showing preview for ${reportName}...`,
+    });
+    console.log("Previewing report:", reportName);
+  };
+
+  const handleReviewReport = (reportId: number) => {
+    setReports(
+      reports.map((report) =>
+        report.id === reportId ? { ...report, status: "completed" } : report
+      )
+    );
+    toast({
+      title: "Report Reviewed",
+      description: `Report has been marked as completed.`,
+    });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed": return "bg-green-600";
@@ -188,6 +208,26 @@ export const Reports = () => {
                         <Download size={14} className="mr-1" />
                         Download
                       </Button>
+                    )}
+                    {report.status === "draft" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handlePreviewReport(report.name)}
+                          className="text-white border-gray-500 hover:bg-gray-600 hover:text-white"
+                        >
+                          <Eye size={14} className="mr-1" />
+                          Preview
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleReviewReport(report.id)}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                        >
+                          Review
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
