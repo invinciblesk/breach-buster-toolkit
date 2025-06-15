@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Download, FileText, Lock, Eye, ShieldCheck, Trash2 } from "lucide-react";
+import { Calendar, Download, FileText, Lock, Eye, ShieldCheck, Trash2, TrendingUp, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -24,6 +24,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from "recharts";
 
 const initialReports = [
   {
@@ -74,6 +80,25 @@ const reportTypeOptions = [
 
 type Report = typeof initialReports[number];
 
+const chartConfig = {
+  high: {
+    label: "High",
+    color: "#dc2626",
+  },
+  medium: {
+    label: "Medium", 
+    color: "#ea580c",
+  },
+  low: {
+    label: "Low",
+    color: "#ca8a04",
+  },
+  info: {
+    label: "Info",
+    color: "#2563eb",
+  },
+};
+
 export const Reports = () => {
   const [reportType, setReportType] = useState("");
   const [reports, setReports] = useState<Report[]>(initialReports);
@@ -88,6 +113,45 @@ export const Reports = () => {
   const completedReports = reports.filter(r => r.status === 'completed').length;
   const inProgressReports = reports.filter(r => r.status === 'processing').length;
   const draftReports = reports.filter(r => r.status === 'draft').length;
+
+  // Generate mock vulnerability severity data for charts
+  const generateVulnerabilityData = (vulnerabilityCount: number) => {
+    const severityDistribution = [
+      { name: "High", value: Math.floor(vulnerabilityCount * 0.2), fill: "#dc2626" },
+      { name: "Medium", value: Math.floor(vulnerabilityCount * 0.4), fill: "#ea580c" },
+      { name: "Low", value: Math.floor(vulnerabilityCount * 0.3), fill: "#ca8a04" },
+      { name: "Info", value: Math.floor(vulnerabilityCount * 0.1), fill: "#2563eb" },
+    ];
+    
+    return severityDistribution.filter(item => item.value > 0);
+  };
+
+  // Generate mock trend data
+  const generateTrendData = () => {
+    return [
+      { date: "Week 1", vulnerabilities: 8, resolved: 3 },
+      { date: "Week 2", vulnerabilities: 12, resolved: 7 },
+      { date: "Week 3", vulnerabilities: 15, resolved: 10 },
+      { date: "Week 4", vulnerabilities: 10, resolved: 8 },
+    ];
+  };
+
+  // Generate mock vulnerability types data
+  const generateVulnTypesData = (vulnerabilityCount: number) => {
+    const types = [
+      "SQL Injection",
+      "XSS",
+      "CSRF", 
+      "Directory Traversal",
+      "Weak Authentication",
+      "Insecure Configuration"
+    ];
+    
+    return types.slice(0, Math.min(6, vulnerabilityCount)).map((type, index) => ({
+      type,
+      count: Math.floor(Math.random() * 5) + 1,
+    }));
+  };
 
   const handleGenerateReport = () => {
     if (!reportType) {
@@ -446,7 +510,7 @@ export const Reports = () => {
       
       {reportToPreview && (
         <Dialog open={!!reportToPreview} onOpenChange={(isOpen) => !isOpen && setReportToPreview(null)}>
-          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-4xl">
+          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-6xl max-h-[90vh]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-2xl">
                 <FileText /> {reportToPreview.name}
@@ -465,13 +529,117 @@ export const Reports = () => {
                 </p>
               </div>
 
+              {reportToPreview.vulnerabilities > 0 && (
+                <div>
+                  <h3 className="font-semibold text-xl mb-4 text-white border-b border-gray-700 pb-2 flex items-center gap-2">
+                    <TrendingUp size={20} />
+                    Vulnerability Analytics
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    {/* Severity Distribution Pie Chart */}
+                    <Card className="bg-gray-900/50 border-gray-600">
+                      <CardHeader>
+                        <CardTitle className="text-white text-lg">Severity Distribution</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer config={chartConfig} className="h-[250px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={generateVulnerabilityData(reportToPreview.vulnerabilities)}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {generateVulnerabilityData(reportToPreview.vulnerabilities).map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                              </Pie>
+                              <ChartTooltip content={<ChartTooltipContent />} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+
+                    {/* Vulnerability Types Bar Chart */}
+                    <Card className="bg-gray-900/50 border-gray-600">
+                      <CardHeader>
+                        <CardTitle className="text-white text-lg">Vulnerability Types</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer config={chartConfig} className="h-[250px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={generateVulnTypesData(reportToPreview.vulnerabilities)}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                              <XAxis 
+                                dataKey="type" 
+                                tick={{ fill: '#9ca3af', fontSize: 11 }}
+                                angle={-45}
+                                textAnchor="end"
+                                height={80}
+                              />
+                              <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                              <ChartTooltip content={<ChartTooltipContent />} />
+                              <Bar dataKey="count" fill="#ea580c" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Remediation Trend */}
+                  <Card className="bg-gray-900/50 border-gray-600 mb-6">
+                    <CardHeader>
+                      <CardTitle className="text-white text-lg">Security Trend Analysis</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ChartContainer config={chartConfig} className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={generateTrendData()}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                            <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                            <Area 
+                              type="monotone" 
+                              dataKey="vulnerabilities" 
+                              stackId="1"
+                              stroke="#dc2626" 
+                              fill="#dc2626" 
+                              fillOpacity={0.6}
+                              name="Vulnerabilities Found"
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="resolved" 
+                              stackId="2"
+                              stroke="#16a34a" 
+                              fill="#16a34a" 
+                              fillOpacity={0.6}
+                              name="Vulnerabilities Resolved"
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
               <div>
                 <h3 className="font-semibold text-xl mb-3 text-white border-b border-gray-700 pb-2">Vulnerability Findings</h3>
                 {reportToPreview.vulnerabilities > 0 ? (
                   <div className="space-y-4 mt-4">
                     {Array.from({ length: reportToPreview.vulnerabilities }).map((_, index) => {
                         const severities = ["High", "Medium", "Low"];
-                        const severity = severities[index % 3]; // Cycle through severities for variety
+                        const severity = severities[index % 3];
                         return (
                             <div key={index} className={`p-4 bg-gray-900/50 rounded-lg border-l-4 ${getSeverityBorderColor(severity)}`}>
                                 <div className="flex justify-between items-center">
